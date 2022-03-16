@@ -1,7 +1,7 @@
 <template>
   <div class="home">
     <div class="banner">
-      <img alt="Vue logo" style="width: 64px; height: 64px" src="../assets/logo.png">
+      <img alt="Vue logo" style="width: 64px; height: 64px" src="~@/assets/hhsy-logo.jpeg">
       <h3 style="margin-top: 1rem">Welcome to Your Vue.js App</h3>
     </div>
 
@@ -110,54 +110,54 @@
 </template>
 
 <script>
-  // @ is an alias to /src
+// @ is an alias to /src
 
-  import Trend from '@/components/Trend'
-  import AvatarList from '@/components/AvatarList'
-  import CountDown from '@/components/CountDown/CountDown'
-  import Ellipsis from '@/components/Ellipsis'
-  import NumberInfo from '@/components/NumberInfo'
+import Trend from '@/components/Trend'
+import AvatarList from '@/components/AvatarList'
+import CountDown from '@/components/CountDown/CountDown'
+import Ellipsis from '@/components/Ellipsis'
+import NumberInfo from '@/components/NumberInfo'
 
-  const AvatarListItem = AvatarList.AvatarItem
+const AvatarListItem = AvatarList.AvatarItem
 
-  export default {
-    name: 'Home',
-    components: {
-      NumberInfo,
-      Ellipsis,
-      CountDown,
-      Trend,
-      AvatarList,
-      AvatarListItem
+export default {
+  name: 'Home',
+  components: {
+    NumberInfo,
+    Ellipsis,
+    CountDown,
+    Trend,
+    AvatarList,
+    AvatarListItem
+  },
+  data () {
+    return {
+      targetTime: new Date().getTime() + 3900000
+    }
+  },
+  methods: {
+    onEndHandle () {
+      this.$message.success('CountDown callback!!!')
     },
-    data () {
-      return {
-        targetTime: new Date().getTime() + 3900000
-      }
-    },
-    methods: {
-      onEndHandle () {
-        this.$message.success('CountDown callback!!!')
-      },
-      onEndHandle2 () {
-        this.$notification.open({
-          message: 'Notification Title',
-          description: 'This is the content of the notification. This is the content of the notification. This is the content of the notification.',
-        });
-      }
+    onEndHandle2 () {
+      this.$notification.open({
+        message: 'Notification Title',
+        description: 'This is the content of the notification. This is the content of the notification. This is the content of the notification.',
+      });
     }
   }
+}
 </script>
 
 <style scoped>
-  .home {
-    width: 900px;
-    margin: 0 auto;
-    padding: 25px 0;
-  }
-  .home > .banner {
-    text-align: center;
-    padding: 25px 0;
-    margin: 25px 0;
-  }
+.home {
+  width: 900px;
+  margin: 0 auto;
+  padding: 25px 0;
+}
+.home > .banner {
+  text-align: center;
+  padding: 25px 0;
+  margin: 25px 0;
+}
 </style>

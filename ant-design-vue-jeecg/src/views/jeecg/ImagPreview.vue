@@ -56,60 +56,60 @@
 
 <script>
 
-  import ARow from 'ant-design-vue/es/grid/Row'
+import ARow from 'ant-design-vue/es/grid/Row'
 
-  export default {
-    name: 'ImagPreview',
-    components: {
-      ARow
-    },
-    data() {
-      return {
-        description: '图片预览页面',
-        spinning:false,
-        //数据集
-        dataSource: [{
-          key:0,
-          fileDetails:[
-            {
-              imgUrl:"https://static.jeecg.com/upload/test/3a4490d5d1cd495b826e528537a47cc1.jpg"
-            },
-            {
-              imgUrl:"https://static.jeecg.com/temp/国炬软件logo_1606575029126.png"
-            }
-          ]
-        },{
-          key:1,
-          fileDetails:[
-            {
-              imgUrl:"https://static.jeecg.com/upload/test/u27356337152749454924fm27gp0_1588149731821.jpg"
-            },
-            {
-              imgUrl:"https://static.jeecg.com/upload/test/1_1588149743473.jpg"
-            }
-          ]
-        }
-    ],
-    url: {
-    }
+export default {
+  name: 'ImagPreview',
+  components: {
+    ARow
+  },
+  data() {
+    return {
+      description: '图片预览页面',
+      spinning:false,
+      //数据集
+      dataSource: [{
+        key:0,
+        fileDetails:[
+          {
+            imgUrl:"https://static.jeecg.com/upload/test/3a4490d5d1cd495b826e528537a47cc1.jpg"
+          },
+          {
+            imgUrl:"~@/assets/hhsy-logo.jpeg"
+          }
+        ]
+      },{
+        key:1,
+        fileDetails:[
+          {
+            imgUrl:"https://static.jeecg.com/upload/test/u27356337152749454924fm27gp0_1588149731821.jpg"
+          },
+          {
+            imgUrl:"https://static.jeecg.com/upload/test/1_1588149743473.jpg"
+          }
+        ]
       }
-    },
-    created() {
-    },
-    methods: {
+      ],
+      url: {
+      }
     }
+  },
+  created() {
+  },
+  methods: {
   }
+}
 </script>
 <style scoped>
-  .table-operator {
-    margin-bottom: 10px
-  }
+.table-operator {
+  margin-bottom: 10px
+}
 
-  .clName .ant-tree li span.ant-tree-switcher, .ant-tree li span.ant-tree-iconEle {
-    width: 10px !important;
-  }
+.clName .ant-tree li span.ant-tree-switcher, .ant-tree li span.ant-tree-iconEle {
+  width: 10px !important;
+}
 
-  .clName .ant-tree li .ant-tree-node-content-wrapper.ant-tree-node-selected {
-    background-color: #1890FF !important;
-  }
+.clName .ant-tree li .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background-color: #1890FF !important;
+}
 </style>
