@@ -49,6 +49,9 @@ import '@/components/jeecg/JVxeTable/install'
 import '@/components/JVxeCells/install'
 //表单验证
 import { rules } from '@/utils/rules'
+
+import * as cesiumConfig from './cesium.config'
+
 Vue.prototype.rules = rules
 Vue.config.productionTip = false
 Vue.use(Storage, config.storageOptions)

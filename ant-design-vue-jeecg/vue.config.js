@@ -39,6 +39,7 @@ module.exports = {
       .set('@assets', resolve('src/assets'))
       .set('@comp', resolve('src/components'))
       .set('@views', resolve('src/views'))
+      .set('@plugins', resolve('src/plugins'))
 
     //生产环境，开启js\css压缩
     if (process.env.NODE_ENV === 'production') {
