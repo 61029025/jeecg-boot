@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+
+<!-- 本DEMO中将演示如何通过API查询某个风管构件的下游所有构件 -->
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>MEP System</title>
+    <style media="screen">
+        * {
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+            width: 100%
+        }
+
+        .model {
+            flex: 1
+        }
+
+        .button {
+            margin: 5px auto;
+            width: 100px;
+            height: 30px;
+            background: #32D3A6;
+            color: #FFFFFF;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer
+        }
+    </style>
+    <!-- 引用BIMFACE的JavaScript显示组件库 -->
+    <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"
+            charset="utf-8"></script>
+</head>
+
+<body>
+<!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+<div class='main'>
+    <div class='buttons'>
+        <button class="button" id="btnConnectedComponents" onclick="getConnectedComponents()">获取相邻构件</button>
+        <button class="button" id="btnDownstreamComponents" onclick="getDownstreamComponents()">获取下游构件</button>
+    </div>
+    <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+    <div class='model' id="domId"></div>
+</div>
+<script type="text/javascript">
+    let viewer3D;
+    let app;
+    let viewAdded = false;
+    let viewToken = '57566d3175eb47b593cc63899c334644';
+    // 初始化显示组件
+    let options = new BimfaceSDKLoaderConfig();
+    options.viewToken = viewToken;
+    BimfaceSDKLoader.load(options, successCallback, failureCallback);
+    function successCallback(viewMetaData) {
+        if (viewMetaData.viewType == "3DView") {
+            // ======== 判断是否为3D模型 ========
+            // 获取DOM元素
+            let dom4Show = document.getElementById('domId');
+            let webAppConfig = new Glodon.Bimface.Application.WebApplication3DConfig();
+            webAppConfig.domElement = dom4Show;
+            // 创建WebApplication
+            app = new Glodon.Bimface.Application.WebApplication3D(webAppConfig);
+            // 添加待显示的模型
+            app.addView(viewToken);
+            // 从WebApplication获取viewer3D对象
+            viewer3D = app.getViewer();
+            // 监听添加view完成的事件
+            viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, function () {
+                //自适应屏幕大小
+                window.onresize = function () {
+                    viewer3D.resize(document.documentElement.clientWidth, document.documentElement.clientHeight - 40);
+                }
+                viewAdded = true;
+                // 调用viewer3D对象的Method，可以继续扩展功能
+                // 渲染3D模型
+                viewer3D.render();
+            });
+        }
+    }
+    function failureCallback(error) {
+        console.log(error);
+    }
+
+    let helper = null;
+
+    function getConnectedComponents() {
+        if (!viewAdded) {
+            return;
+        }
+
+        // 构造MEP拓扑应用的对象
+        if (!helper) {
+            let helperConfig = new Glodon.Bimface.Plugins.RevitHelpers.MEPTopologyHelperConfig();
+            helperConfig.viewer = viewer3D;
+            helper = new Glodon.Bimface.Plugins.RevitHelpers.MEPTopologyHelper(helperConfig);
+        }
+
+        helper.getConnectedComponentsById('493131', function (data) {
+            // 隐藏屋顶
+            viewer3D.hideComponentsById(['573547']);
+            for (let i = 0; i < data.down.length; i++) {
+                viewer3D.getModel().addSelectedComponentsById(data.down[i].id);
+            }
+            viewer3D.render();
+        });
+    }
+
+    function getDownstreamComponents() {
+        if (!viewAdded) {
+            return;
+        }
+
+        // 构造MEP拓扑应用的对象
+        if (!helper) {
+            let helperConfig = new Glodon.Bimface.Plugins.RevitHelpers.MEPTopologyHelperConfig();
+            helperConfig.viewer = viewer3D;
+            helper = new Glodon.Bimface.Plugins.RevitHelpers.MEPTopologyHelper(helperConfig);
+        }
+
+        helper.getDownstreamComponentsById('493131', function (data) {
+            // 隐藏屋顶
+            viewer3D.getModel().hideComponentsById(['573547']);
+            for (let i = 0; i < data.length; i++) {
+                viewer3D.getModel().addSelectedComponentsById(data[i].id);
+            }
+            viewer3D.render();
+        });
+    }
+
+</script>
+</body>
+
+</html>

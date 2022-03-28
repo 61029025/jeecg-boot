@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+
+<!-- 本DEMO中将演示如何通过API给曲线添加贴图 -->
+
+<head>
+    <meta charset="utf-8">
+    <title>曲线贴图</title>
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .buttons {
+            font-size: 0;
+        }
+
+        .button {
+            margin: 5px 0 5px 5px;
+            width: 90px;
+            height: 30px;
+            border-radius: 3px;
+            border: none;
+            background: #32D3A6;
+            color: #FFFFFF;
+            outline: none;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        #domId {
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+<div class='main'>
+    <div class='buttons'>
+        <button class="button" id="btnAddCurveAnimation" onclick="addCurveAnimation()">添加曲线</button>
+    </div>
+    <div id="domId"></div>
+</div>
+<script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"></script>
+<script>
+    let viewToken = '815ed6426dc04995bcc9586a8cea3767';
+    let modelId = '2018112574908608';
+    // 声明Viewer及App
+    let viewer3D;
+    let app;
+    let viewAdded = false;
+    // 配置JSSDK加载项
+    window.onload = function () {
+        let loaderConfig = new BimfaceSDKLoaderConfig();
+        loaderConfig.viewToken = viewToken;
+        BimfaceSDKLoader.load(loaderConfig, successCallback, failureCallback);
+    }
+    // 加载成功回调函数
+    function successCallback(viewMetaData) {
+        let dom4Show = document.getElementById('domId');
+        // 设置WebApplication3D的配置项
+        let webAppConfig = new Glodon.Bimface.Application.WebApplication3DConfig();
+        webAppConfig.domElement = dom4Show;
+        webAppConfig.enableReplaceMaterial = true;
+        // 创建WebApplication3D，用以显示模型
+        app = new Glodon.Bimface.Application.WebApplication3D(webAppConfig);
+        app.addView(viewToken);
+        viewer3D = app.getViewer();
+        viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, function () {
+            viewAdded = true;
+            // 设置深色背景色
+            viewer3D.setBackgroundColor(new Glodon.Web.Graphics.Color(17, 38, 53, 1));
+            // 关闭模型动画
+            viewer3D.setCameraAnimation(false);
+            // 设置相机视角
+            viewer3D.getCamera().setStatus({ "name": "persp", "position": { "x": 12681316.479044322, "y": 23440758.388927076, "z": 1271877.1703935047 }, "target": { "x": 14882242.657645721, "y": 27942361.521465983, "z": -1451063.7159686312 }, "up": { "x": 0.20972100859783582, "y": 0.42894285025341905, "z": 0.8786496057981129 }, "fov": 45, "zoom": 1, "version": 1, "coordinateSystem": "world" })
+            // 模型着色
+            viewer3D.getModel().overrideAllComponentsColor(new Glodon.Web.Graphics.Color(200, 200, 200, 0.55));
+            viewer3D.overrideComponentsColorById(["9", "10", "11", "14", "17", "18"], new Glodon.Web.Graphics.Color(0, 22, 42, 1));
+            viewer3D.overrideComponentsColorById(["69", "70"], new Glodon.Web.Graphics.Color(182, 222, 239, 0.1));
+            // 设置线框颜色
+            viewer3D.getModel().setWireframeColor(new Glodon.Web.Graphics.Color(200, 219, 255, 0.3));
+            viewer3D.hideComponentsById(["3", "4", "5", "21", "19"]);
+            // 获取灯光管理器
+            lightMng = viewer3D.getLightManager();
+            // 获取默认用于控制投影的方向光
+            directionalLight = lightMng.getAllDirectionalLights()[0];
+            // 开启阴影
+            directionalLight.enableShadow(true);
+            window.onresize = function () {
+                viewer3D.resize(document.documentElement.clientWidth, document.documentElement.clientHeight - 40);
+            }
+        });
+    }
+    // 加载失败回调函数
+    function failureCallback(error) {
+        console.log(error);
+    }
+
+
+    let z = 5000;
+    let points = [[{ "x": 14425257, "y": 24064823, "z": z }, { "x": 14294726, "y": 24632057, "z": z }, { "x": 14122681, "y": 25016419, "z": z }, { "x": 13937697, "y": 25429324, "z": z }, { "x": 13916226, "y": 25508483, "z": z }, { "x": 13812176, "y": 26048170, "z": z }, { "x": 13643940, "y": 26767562, "z": z }, { "x": 13489450, "y": 27214793, "z": z }, { "x": 13411786, "y": 27451164, "z": z }, { "x": 13382486, "y": 27674980, "z": z }, { "x": 13302263, "y": 27914581, "z": z }, { "x": 12924067, "y": 28386178, "z": z }],
+        [{ "x": 11551831, "y": 25250068, "z": z }, { "x": 11992284, "y": 25222409, "z": z }, { "x": 12764175, "y": 25580575, "z": z }, { "x": 13437974, "y": 26013906, "z": z }, { "x": 13655768, "y": 26057006, "z": z }, { "x": 13861093, "y": 26023910, "z": z }, { "x": 14019826, "y": 26121871, "z": z }, { "x": 14314736, "y": 26289084, "z": z }, { "x": 14757412, "y": 26632625, "z": z }, { "x": 15103756, "y": 26809492, "z": z }, { "x": 15160084, "y": 26818042, "z": z }, { "x": 15233296, "y": 26806910, "z": z }, { "x": 15961114, "y": 26506215, "z": z }, { "x": 17055991, "y": 26109855, "z": z }]];
+    let splineCurve;
+    let path = [];
+    let curveIds = [];
+    let isSplineCurveAdded = false;
+    // 路径曲线的构造函数
+    function createCurve() {
+        if (!isSplineCurveAdded) {
+            // 构造外部构件管理器
+            extObjMng = new Glodon.Bimface.Plugins.ExternalObject.ExternalObjectManager(viewer3D);
+            let color = new Glodon.Web.Graphics.Color(255, 52, 0, 1.0);
+            let width = 2;
+            let style = {
+                "lineType": "Continuous",
+                "lineStyle": null
+            };
+            let count = 0;
+            for (let i = 0; i < points.length; i++) {
+                // 构造曲线
+                let splineCurve = new Glodon.Bimface.Plugins.Geometry.SplineCurve({
+                    points:points[i],
+                    viewer:viewer3D,
+                    color:color,
+                    width:width,
+                    style:style
+                });
+                path.push(splineCurve);
+                // 曲线贴图
+                splineCurve.setMap({
+                        src: "https://static-test.bimface.com/attach/3f9b4c5612194a71b0523766840351e6_流线贴图1028-6.png",
+                        // 允许颜色覆盖
+                        enableColorOverride: false
+                    },
+                    function () {
+                        let objectName = 'splineCurve' + count;
+                        extObjMng.loadObject({ name: objectName, object: path[count] });
+                        let curveId = extObjMng.getObjectIdByName(objectName);
+                        curveIds.push(curveId);
+                        count++;
+                        // 添加辉光效果
+                        addBloomEffect();
+                    });
+            }
+        }
+        isSplineCurveAdded = true;
+    }
+
+    let iscurveAnimationAdded = false;
+    let isCurveAdded = false;
+    // 构造曲线动画
+    function addCurveAnimation() {
+        if (!isCurveAdded) {
+            createCurve();
+            // 构造曲线动画的配置项
+            curveAnimationConfig = new Glodon.Bimface.Plugins.Animation.CurveAnimationConfig();
+            // 配置Viewer对象、曲线对象、动画时间、动画循环、动画类型等参数
+            curveAnimationConfig.viewer = viewer3D;
+            curveAnimationConfig.curves = path;
+            curveAnimationConfig.time = 1500;
+            curveAnimationConfig.loop = true;
+            curveAnimationConfig.type = "flow";
+            // 构造曲线动画对象
+            curveAnimation = new Glodon.Bimface.Plugins.Animation.CurveAnimation(curveAnimationConfig);
+            isCurveAdded = true;
+        };
+        if (!iscurveAnimationAdded) {
+            // 播放动画
+            curveAnimation.play();
+            setButtonText('btnAddCurveAnimation', '停止动画');
+        } else {
+            // 停止动画
+            curveAnimation.stop();
+            setButtonText('btnAddCurveAnimation', '播放动画');
+        }
+        iscurveAnimationAdded = !iscurveAnimationAdded;
+    }
+
+    // 添加辉光效果
+    function addBloomEffect() {
+        if (curveIds.length == points.length) {
+            let ids = [{ "objectIds": curveIds }];
+            // 构造辉光效果的配置项
+            let bloomEffectConfig = new Glodon.Bimface.Plugins.Effect.BloomEffectConfig();
+            // 设置构件ID数组、强度、扩散程度、viewer等参数
+            bloomEffectConfig.ids = ids;
+            bloomEffectConfig.intensity = 0.8;
+            bloomEffectConfig.spread = 3;
+            bloomEffectConfig.viewer = viewer3D;
+            // 构造辉光效果
+            bloomEffect = new Glodon.Bimface.Plugins.Effect.BloomEffect(bloomEffectConfig);
+        }
+    }
+
+
+    // *********************** 按钮文字 ***********************
+    function setButtonText(btnId, text) {
+        let dom = document.getElementById(btnId);
+        if (dom != null && dom.nodeName == "BUTTON") {
+            dom.innerText = text;
+        }
+    }
+</script>
+</body>
+
+</html>

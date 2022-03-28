@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>填挖方分析</title>
+    <style media="screen">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+        }
+
+        .bf_demo_panel {
+            height: 220px;
+            width: 400px;
+        }
+
+        .bf_demo_label {
+            font-size: 14px;
+            padding-right: 12px;
+            padding-left: 20px;
+            line-height: 28px;
+            height: 28px;
+        }
+
+        .bf_demo_row {
+            padding-top: 10px;
+            justify-content: left;
+        }
+
+        .bfui-row.bf_demo_row_right {
+            padding-top: 20px;
+            justify-content: right;
+            display: inline-block;
+        }
+
+        .bf_demo_input {
+            float: left;
+            outline: none;
+            width: 150px;
+            height: 24px;
+            justify-content: flex-end;
+            padding-left: 10px;
+        }
+
+        .bfui-button.bf_demo_btn {
+            margin: 5px 20px 5px 5px;
+            padding: 0px;
+            width: 70px;
+            height: 30px;
+            border-radius: 2px;
+            border: none;
+            background: #32D3A6;
+            color: #FFFFFF;
+            outline: none;
+            font-size: 14px;
+            line-height: 30px;
+            float: right;
+        }
+
+        .bfui-button.bf_demo_button {
+            margin: 5px 15px 5px 5px;
+            padding: 0px;
+            width: 70px;
+            height: 25px;
+            border-radius: 2px;
+            border: none;
+            background: #32D3A6;
+            color: #FFFFFF;
+            outline: none;
+            font-size: 14px;
+            line-height: 25px;
+            float: right;
+        }
+
+        .model {
+            height: 100%;
+        }
+    </style>
+    <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"></script>
+</head>
+
+<body>
+<div class='main'>
+    <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+    <div class='model' id="domId"></div>
+</div>
+<script type="text/javascript">
+    // 声明 viewer 及 app
+    let viewer, app;
+    // 声明 UI管理器、主工具条、自定义工具条、图层管理器、外部构件图层
+    let uiMng, mainToolbar, toolbar, layerMng, extLayer;
+
+    let viewToken = 'cf2960a2daeb47d19658b61acff2cdd4';
+
+    // 初始化SDKLoader
+    let BimfaceLoaderConfig = new BimfaceSDKLoaderConfig();
+    BimfaceLoaderConfig.viewToken = viewToken;
+    BimfaceSDKLoader.load(BimfaceLoaderConfig, onSDKLoadSucceeded, onSDKLoadFailed);
+
+    // 资源加载成功的回调函数
+    function onSDKLoadSucceeded(viewMetaData) {
+
+        // 构造app
+        let dom4Show = document.getElementById('domId');
+        let webAppConfig = new Glodon.Bimface.Application.WebApplicationGISConfig();
+        webAppConfig.domElement = dom4Show;
+        app = new Glodon.Bimface.Application.WebApplicationGIS(webAppConfig);
+
+        // 获取viewer并加载场景
+        viewer = app.getViewer();
+        viewer.addScene(viewToken);
+
+        // 场景加载的监听事件，场景加载后获取主工具条、管理器等对象，并添加场景效果
+        viewer.addEventListener(Glodon.Bimface.Viewer.ViewerGISEvent.SceneAdded, function () {
+            // 获取图层管理器
+            layerMng = viewer.getLayerManager();
+            // 获取UI管理器
+            uiMng = app.getUIManager();
+            // 获取主工具条
+            mainToolbar = uiMng.getToolbar('MainToolbar');
+
+            // 显示地形
+            layerMng.getLayer('2').show();
+
+            // 添加自定义工具条
+            addToolbar();
+
+            // 添加外部构件图层，用于绘制填挖方的区域
+            extLayer = new Glodon.Bimface.Layer.ExternalObjectLayer({
+                name: "填挖方区域",
+                id: 'extLayerId',
+                isVisible: true
+            });
+            layerMng.addLayer(extLayer);
+        });
+    }
+
+    // 资源加载失败的回调函数
+    function onSDKLoadFailed(error) {
+        console.log(error);
+    }
+
+    // 添加自定义工具条
+    function addToolbar() {
+        // 构造自定义工具条对象
+        toolbar = new Glodon.Bimface.Tiles.UI.Toolbar({
+            // 工具条ID
+            id: 'toolbar',
+            // 工具条的方向，可设置为水平或垂直，当前设置为水平
+            isHorizontal: true,
+            // 按钮在工具条中的对齐方式，当前设置为居中
+            controlAlign: Glodon.Bimface.Tiles.UI.ControlAlignOption.Center
+        });
+
+        // 在工具条中添加按钮
+        toolbar.addControl(cutFill());
+
+        // 将工具条添加至UI管理器中，并设置工具条在div中的位置，这里设置了底部居中并向上偏移20px
+        uiMng.addControl(toolbar, {
+            position: {
+                anchor: Glodon.Bimface.Tiles.UI.ControlAnchor.BottomCenter,
+                offset: { x: 0, y: -20 }
+            }
+        });
+    }
+
+    // 添加填挖方分析的按钮
+    function cutFill() {
+        // 构造按钮对象
+        btn_cutFill = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_cutFill'
+        });
+
+        // 设置按钮的显示文字、tooltips
+        btn_cutFill.setText('填挖方');
+        btn_cutFill.setTooltip('对地形进行填挖方分析');
+
+        // 设置按钮的点击事件
+        btn_cutFill.onClick(function () {
+            if (cutFillPanel) {
+                // 控制面板的可见性
+                if (cutFillPanel.isVisible()) {
+                    cutFillPanel.hide();
+                } else {
+                    cutFillPanel.show()
+                }
+            } else {
+                // 初始化面板，并显示
+                initCutFillPanel();
+                cutFillPanel.show();
+            }
+        });
+        return btn_cutFill;
+    }
+
+    // 声明面板对象
+    let cutFillPanel = null;
+    // 声明记录填挖方区域的变量
+    let boundaryArray;
+    // 声明填挖方分析对象
+    let cutFillAnalysis;
+
+    // 初始化填挖方分析的面板
+    function initCutFillPanel() {
+        // 构造面板对象，设置面板大小不可调整
+        cutFillPanel = new Glodon.Bimface.Tiles.UI.Panel({
+            id: 'panel_cutFill',
+            title: '填挖方分析',
+            sizeFixed: true
+        });
+        // 调整面板样式
+        cutFillPanel.addClass('bf_demo_panel');
+
+        // 构造标签对象
+        let label_boundary = new Glodon.Bimface.Tiles.UI.Label({
+            id: 'label_boundary',
+            text: '填挖方区域：'
+        });
+        // 设置标签样式
+        label_boundary.addClass('bf_demo_label');
+
+        // 构造按钮对象
+        let btn_boundary = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_boundary'
+        });
+        // 设置按钮的显示文字、tooltips
+        btn_boundary.setText('点选区域');
+        btn_boundary.setTooltip('左键添加，右键结束');
+        // 设置按钮样式
+        btn_boundary.addClass('bf_demo_button');
+        // 定义按钮的点击事件
+        btn_boundary.onClick(function () {
+            // 移除已有的鼠标点击监听事件
+            viewer.removeEventListener(Glodon.Bimface.Viewer.ViewerGISEvent.MouseClicked, addPoint);
+            // 获取外部构件图层内已有的外部构件ID
+            let id = extLayer.getExternalObjectManager().getObjectIdByName('spline');
+            if (id){
+                extLayer.getExternalObjectManager().removeById(id);
+            }
+            if(cutFillAnalysis){
+                cutFillAnalysis.hide();
+            }
+            boundaryArray = [];
+            window.alert('在地图上选择填挖方分析的区域，左键添加点，右键结束');
+            // 添加鼠标点击的监听事件
+            viewer.addEventListener(Glodon.Bimface.Viewer.ViewerGISEvent.MouseClicked, addPoint);
+        });
+
+        // 构造一个row对象，将标签、按钮对象添加至row内，并将row添加至panel内
+        let row_boundary = new Glodon.Bimface.Tiles.UI.Row({
+            id: 'row_boundary',
+            justifyContent: 'Start'
+        });
+        row_boundary.addControl(label_boundary);
+        row_boundary.addControl(btn_boundary);
+        row_boundary.addClass('bf_demo_row');
+        cutFillPanel.addControl(row_boundary);
+
+
+        // 构造标签对象
+        let label_level = new Glodon.Bimface.Tiles.UI.Label({
+            id: 'label_level',
+            text: '基准面标高：'
+        });
+
+        // 标签添加类样式
+        label_level.addClass('bf_demo_label');
+
+        // 构造输入框对象
+        let input_level = new Glodon.Bimface.Tiles.UI.Input({
+            id: 'input_level',
+            text: '基准面标高，单位：m'
+        });
+
+        // 输入框添加类样式
+        input_level.addClass('bf_demo_input');
+
+        // 构造一个row对象，将标签、输入框对象添加至row内，并将row添加至panel内
+        let row_level = new Glodon.Bimface.Tiles.UI.Row({
+            id: 'row_level',
+            justifyContent: 'Start'
+        });
+        row_level.addControl(label_level);
+        row_level.addControl(input_level);
+        row_level.addClass('bf_demo_row');
+        cutFillPanel.addControl(row_level);
+
+        // 构造“开始分析”按钮
+        let btn_calculate = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_calculate',
+            text: '开始分析'
+        });
+
+        // 定义点击“开始分析”按钮的行为
+        btn_calculate.onClick(function() {
+            // 清空已绘制的填挖方区域贴地线
+            let id = extLayer.getExternalObjectManager().getObjectIdByName('spline');
+            extLayer.getExternalObjectManager().removeById(id);
+            if(cutFillAnalysis){
+                cutFillAnalysis.hide();
+            }
+            // 获取输入框内的值，并转化为数字
+            let newboundary = boundaryArray;
+            let newlevel = Number(input_level.getValue());
+            // 非数字时，输入框内容会转换为NaN，以此来判断输入框内容的合法性;
+            if (!isNaN(newlevel)) {
+                // 进行填挖方计算
+                let cutFillConfig = new Glodon.Bimface.Analysis.CutFill.CutFillAnalysisConfig();
+                cutFillConfig.viewer = viewer;
+                cutFillConfig.level = newlevel;
+                cutFillConfig.boundary = newboundary;
+                cutFillAnalysis = new Glodon.Bimface.Analysis.CutFill.CutFillAnalysis(cutFillConfig);
+                window.alert('填挖方区域总面积：' + cutFillAnalysis.getTotalArea() + 'm²\n'
+                    + '挖方量：' + cutFillAnalysis.getCutVolume() + 'm³\n'+'挖方面积：' + cutFillAnalysis.getCutArea() + 'm²\n'+
+                    '填方量：'+ cutFillAnalysis.getFillVolume() + 'm³\n'+  '填方面积：'+cutFillAnalysis.getFillArea() + 'm²\n');
+                // 控制台输出填挖方分析的计算结果
+                console.log('填挖方区域总面积：' + cutFillAnalysis.getTotalArea() + 'm²\n'
+                    + '挖方量：' + cutFillAnalysis.getCutVolume() + 'm³\n'+'挖方面积：' + cutFillAnalysis.getCutArea() + 'm²\n'+
+                    '填方量：'+ cutFillAnalysis.getFillVolume() + 'm³\n'+  '填方面积：'+cutFillAnalysis.getFillArea() + 'm²\n');
+                viewer.render();
+            }
+        });
+
+        // 按钮添加类样式
+        btn_calculate.addClass('bf_demo_btn');
+
+        // 构造row对象，设置其样式，并将确认按钮添加至该row对象内
+        let row_confirm = new Glodon.Bimface.Tiles.UI.Row({
+            id: 'row_confirm'
+        });
+        row_confirm.addControl(btn_calculate);
+        row_confirm.addClass('bf_demo_row_right');
+
+        // 在面板中添加row_confirm对象
+        cutFillPanel.addControl(row_confirm);
+
+        // 将面板添加至UI管理器中，并设置其初始位置，这里设置位置为右侧中间
+        uiMng.addControl(cutFillPanel, {
+            position: {
+                anchor: Glodon.Bimface.Tiles.UI.ControlAnchor.MiddleRight,
+                offset: { x: -20, y: 0 }
+            }
+        });
+    }
+
+    // 鼠标点击事件的处理函数
+    function addPoint(data) {
+        // 清空已绘制的填挖方区域贴地线
+        let id = extLayer.getExternalObjectManager().getObjectIdByName('spline');
+        if(id){
+            extLayer.getExternalObjectManager().removeById(id);
+        }
+        // 判断是否为鼠标右键行为
+        if (data.eventType =='RightClick'){
+            viewer.removeEventListener(Glodon.Bimface.Viewer.ViewerGISEvent.MouseClicked, addPoint);
+            let i = boundaryArray.length;
+            // 若点选的点数低于3，弹出警告
+            if(i<3){
+                window.alert('请至少选择三个点！');
+            }else{
+                // 将边界列表形成闭环，便于绘制填挖方区域的贴地线
+                boundaryArray.push(boundaryArray[0]);
+                // 构造贴地线对象
+                let spline = new Glodon.Bimface.Plugins.Geometry.SplineCurve(boundaryArray);
+                spline.setType('polyline');
+                spline.clampMode({mode:'Ground'});
+                spline.setWidth(3);
+                // 在外部构件图层中添加贴地线对象
+                extLayer.getExternalObjectManager().loadObject({ name: "spline", object: spline});
+                viewer.render();
+            }
+        }else{
+            // 记录鼠标点击的位置信息
+            boundaryArray.push(data.worldPosition);
+            let i = boundaryArray.length;
+            if(i>1){
+                // 构造贴地线对象
+                let spline = new Glodon.Bimface.Plugins.Geometry.SplineCurve(boundaryArray);
+                // 设置为折线类型
+                spline.setType('polyline');
+                // 设置贴地模型
+                spline.clampMode({mode:'Ground'});
+                // 设置绘制曲线的宽度
+                spline.setWidth(3);
+                // 将贴地线对象添加至外部构件图层中
+                extLayer.getExternalObjectManager().loadObject({ name: "spline", object: spline});
+                viewer.render();
+            }
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>bim demo</title>
+    <link href="/plugins/bimsdk/css/app.css" rel=stylesheet>
+    <script src="/plugins/bimsdk/js/app.js"></script>
+</head>
+
+<body>
+<div style="height: calc(100%)">
+    <bim-widget2/>
+</div>
+<script>
+    var bimElement = document.querySelector("bim-widget2")
+    var bim = bimElement.getVueInstance()
+
+    bim.init({
+        bimbackUrl: 'http://bimengine.dhcad.cn/bim/',
+        userId: 'd6831b7e73074da0a3b5',
+        secretId: '39d468348e1845cc96a2',
+        projectId: '70995e1873bd4418ae70'
+    }, () => {
+        bim.addModelsByProjectId('70995e1873bd4418ae70', () => {
+            console.log("加载完成")
+        })
+    })
+</script>
+</body>
+
+</html>

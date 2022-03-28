@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>bim demo</title>
+    <link href="/plugins/bimsdk/css/app.css" rel=stylesheet>
+    <script src="/plugins/bimsdk/js/app.js"></script>
+</head>
+
+<body>
+<button class="btn" id="addBtn" onclick="addWater()">添加海洋</button>
+<button class="btn" id="rainBtn" onclick="rain()">开启雨天效果</button>
+<button class="btn" id="snowBtn" onclick="snow()">开启雪天效果</button>
+<button class="btn" id="switchBtn" onclick="ambientOcclusion()">关闭环境阴影</button>
+<div style="height: calc(100% - 42px)">
+    <bim-widget2/>
+</div>
+<script>
+    var bimElement = document.querySelector("bim-widget2")
+    var bim = bimElement.getVueInstance()
+
+    bim.init({
+        bimbackUrl: 'http://bimengine.dhcad.cn/bim/',
+        userId: 'd6831b7e73074da0a3b5',
+        secretId: '39d468348e1845cc96a2',
+        projectId: '70995e1873bd4418ae70'
+    }, () => {
+        bim.addModelsByProjectId('70995e1873bd4418ae70', () => {
+            console.log("加载完成")
+        })
+    })
+
+    function addWater() {
+        document.getElementById("addBtn").style.cursor = 'not-allowed'
+        document.getElementById("addBtn").setAttribute("disabled", true)
+        let params = {
+            width: 5000,
+            height: 5000,
+            position: {
+                x: 0,
+                y: 0,
+                z: -30
+            }
+        }
+        bim.loadWater(params)
+    }
+
+    var isRain = false
+
+    function rain() {
+        if (isRain) {
+            bim.disableWeather('rain')
+            document.getElementById('rainBtn').innerText = '开启雨天效果'
+        } else {
+            // 可通过第二个参数设置雨的强度 小雨:0;中雨:1;大雨:2,默认中雨
+            bim.enableWeather('rain', 1)
+            document.getElementById('rainBtn').innerText = '关闭雨天效果'
+        }
+        isRain = !isRain
+    }
+
+    var isSnow = false
+
+    function snow() {
+        if (isSnow) {
+            bim.disableWeather('snow')
+            document.getElementById('snowBtn').innerText = '开启雪天效果'
+        } else {
+            // 可通过第二个参数设置雪的强度 小雪:0;中雪:1;大雪:2,默认中雪
+            bim.enableWeather('snow')
+            document.getElementById('snowBtn').innerText = '关闭雪天效果'
+        }
+        isSnow = !isSnow
+    }
+
+    var isEnable = true
+
+    function ambientOcclusion() {
+        isEnable = !isEnable
+        bim.setAmbientOcclusion(isEnable)
+        if (isEnable) {
+            document.getElementById('switchBtn').innerText = '关闭环境阴影'
+        } else {
+            document.getElementById('switchBtn').innerText = '开启环境阴影'
+        }
+    }
+
+</script>
+</body>
+
+</html>

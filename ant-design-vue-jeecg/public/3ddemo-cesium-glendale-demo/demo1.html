@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>场景初始化加载模型</title>
+
+    <!-- 第一步：先引入相关css及js文件 -->
+    <link rel="stylesheet" href="/plugins/cesium-glendale-1/Widgets/widgets.css">
+    <script src="/plugins/cesium-glendale/Cesium.js"></script>
+    <script src="/plugins/cesium-glendale/BIMGISEngine.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* 第三步：容器样式，根据自身业务调整，这里只做参考  */
+
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="cesiumContainer"></div>
+
+<script>
+    //配置参数
+    var defaults = {
+        container: "cesiumContainer", //[必须]容器id
+        showfps: false, //[可选]显示fps
+        openearth: false, //[可选]开启场景
+        imageryprovider: "tianditu_image", //[可选]gis底图
+        openterrain: false, //[可选]开启地形
+        maxspaceerror: 2000, //[可选]模型可视距离
+        loading: false, //[可选]gis模式加载动画
+        bgcolor: "#87CEFA", //[可选]bim模式场景背景色
+        selectedcolor: "#FFFF00", //[可选]选中构件颜色
+        throughwall: true, //[可选]相机是否穿墙
+        editmode: false, //[可选]是否开启编辑模式
+        sitepath: "/src/plugins/cesium-glendale/", //[可选]设置天空盒路径，指向Cesium文件夹
+        searchbox: true, //[可选]gis模型是否显示搜索框
+        mapbox: true, //[可选]gis模型是否显示地图选择
+        searchbox: true, //[可选]gis场景生效，gis场景下影像搜索显示
+        mapbox: true, //[可选]gis场景生效，gis场景下影像切换显示
+        //请将您本地token填写至此
+        secretkey: "cbe8c300dfb0280d71bf6546087c6d2fa49260085f53fca8ce89b62d3293064ede817cce3da36d0ceb952964be2492a3b4cc539dc5f17f0ff51d3595ae968f47a76ac47b0fd29010f5e8af02cd73b4049db068294553abfa450153c246876c041dc33e90d8001317d7e9faa8456b4fc62cab75b1e81cb6df72625920bb2ce94511e3505e1eca8a8797151b83fa97b7fd1bd9ccd42dc1446a1641708a94c622c7a76ac47b0fd29010adece31e7c6a379cbaa7c664abe3d0d7e81d19f31e6ff8c379eb391b46cc93e6eed309ccdab1a9a4c9cafd3a0abffc9e7972ded625a63e389e1243948a260a2ae82ecf81d1cced49e21c96cd7602e0a7c247a0a5c497c8f4c95ae7997565b26fd62e4d3be2a89b5bd0e3b946f714dcde9f543670fca1bb30c30006afb5904ca0ed359b405d174278db6c47b34957a076", //token.txt文件里的内容
+    };
+    var api = new API(defaults); //api对象后面调用接口要全程使用，控制好作用域
+    var nacCube = api.Plugin.InitNavCube({});
+    // 第五步:加载模型
+    //http://10.0.1.69:8088/Tools/output/model/120300/root.glt
+    //http://10.0.1.69:8088/Tools/output/model/779438/root.glt
+    api.Model.AddModel("http://10.0.1.69:8088/Tools/output/model/120300/root.glt", "1",
+        function (data) {
+            if (Cesium.defined(data)) {
+                if (Cesium.defined(data.obj) && data.obj instanceof Cesium.Cesium3DTileset) {
+                    console.log(data);
+                    var clip = api.Plugin.InitClippingSystem();
+                    clip.Create({
+                        id: 123456,// 剖面框id （唯一）
+                        tags: '1',// 要剖切的模型tag
+                        plateLineColor: Cesium.Color.RED,// 剖面线颜色
+                        isShowClipLine: true,//是否显示剖面线
+                        ClipSpeed: 1, // 剖切速度
+                        RotateSpeed: 1, // 旋转速度
+                        box: { // 剖面框相关设置
+                            outline: true, //是否显示剖面框边框线
+                            outlineColor: Cesium.Color.WHITE, //剖面框边框线颜色
+                            planeColor: Cesium.Color.WHITE.withAlpha(0.1), //剖面颜色
+                            scalar: [1.0, 1.0, 1.0] // 剖切框尺寸缩放倍数
+                        },
+                        HelperLineWidth: 2, // 剖切辅助线线宽
+                    })
+                    api.Public.SetOpenSkyBox(true, "Grassland");
+                    api.Public.SetOutLineState(true);
+                }
+            }
+        }
+    );
+
+    // var featureId;
+    // api.Public.Event("LEFT_CLICK", function (click) {
+    //     api.Feature.GetFeatureByEvent(click.position, function (json) {
+    //         if (json != undefined) {
+    //             featureId = json.id;
+    //             batchId = json.batchId;
+    //             api.Feature.ZoomToFeature(featureId, "1", true)
+    //             //api.Feature.SetActorColor(featureId, 255,0,0,1,"1");
+    //         }
+    //     });
+    // });
+
+</script>
+</body>
+
+</html>

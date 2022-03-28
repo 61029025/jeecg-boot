@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>BIMFACE model scene</title>
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .buttons {
+            font-size: 0;
+        }
+
+        .button {
+            margin: 5px 0 5px 5px;
+            width: 90px;
+            height: 30px;
+            border-radius: 3px;
+            border: none;
+            background: #32D3A6;
+            color: #FFFFFF;
+            outline: none;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        #domId {
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+<div class='main'>
+    <div class='buttons'>
+        <button class="button" id="setThirdPersonMode" onclick="setNavigationMode()">开启漫游</button>
+        <button class="button" id="setSpeed" onclick="setSpeedRate()">漫游加速</button>
+    </div>
+    <div id="domId"></div>
+</div>
+<script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"></script>
+<script>
+    let viewToken = '6e737c0333c8469d8b5d7247f349fe08';
+    // 声明Viewer及App
+    let viewer3D;
+    let app;
+    // 判断场景是否加载完成
+    let viewAdded = false;
+    // 配置JSSDK加载项
+    window.onload = function() {
+        let loaderConfig = new BimfaceSDKLoaderConfig();
+        loaderConfig.viewToken = viewToken;
+        BimfaceSDKLoader.load(loaderConfig, successCallback, failureCallback);
+    }
+    // 加载成功回调函数
+    function successCallback(viewMetaData) {
+        let dom4Show = document.getElementById('domId');
+        // 设置WebApplication3D的配置项
+        let webAppConfig = new Glodon.Bimface.Application.WebApplication3DConfig();
+        webAppConfig.domElement = dom4Show;
+        // 创建WebApplication3D，用以显示模型
+        app = new Glodon.Bimface.Application.WebApplication3D(webAppConfig);
+        app.addView(viewToken);
+        viewer3D = app.getViewer();
+        viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, function() {
+            window.onresize = function() {
+                viewer3D.resize(document.documentElement.clientWidth, document.documentElement.clientHeight - 40);
+            }
+            viewAdded = true;
+            // 设置相机视角
+            viewer3D.getCamera().setStatus('{"name":"persp","position":{"x":58182.233855978884,"y":-3421.7313129120244,"z":5067.142296537894},"target":{"x":-296547.81858878315,"y":37387.16930987735,"z":-1602.7659318055164},"up":{"x":-0.018553941607250695,"y":0.0021344412336818013,"z":0.9998255824949943},"near":30.98727416844337,"far":180418.6801956374,"zoom":1,"version":1,"fov":45,"aspect":2.049092849519744,"coordinateSystem":"world"}');
+        });
+    }
+    // 加载失败回调函数
+    function failureCallback(error) {
+        console.log(error);
+    }
+
+    // 设置漫游模式为第三人称漫游
+    isPersonAdded = false;
+    function setNavigationMode() {
+        if (!viewAdded ) {
+            return;
+        }
+        viewer3D.setNavigationMode(Glodon.Bimface.Viewer.NavigationMode3D.ThirdPerson);
+        isPersonAdded = !isPersonAdded;
+    }
+
+    // 设置漫游加速，慢速速度倍率默认为1
+    function setSpeedRate() {
+        if (!viewAdded || !isPersonAdded ) {
+            return;
+        }
+        viewer3D.setFlySpeedRate(8) ;
+    }
+
+</script>
+</body>
+
+</html>

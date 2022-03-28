@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>bim demo</title>
+    <link href="/plugins/bimsdk/css/app.css" rel=stylesheet>
+    <script src="/plugins/bimsdk/js/app.js"></script>
+</head>
+
+<body>
+<div>
+    <button class="btn" onclick="disableDefaultToolbar()">禁用默认工具栏</button>
+    <button class="btn" onclick="enableDefaultToolbar()">启用默认工具栏</button>
+    <button class="btn" onclick="changeDefaultToolbar()">修改默认工具栏</button>
+    <button class="btn" onclick="customToolbar()">自定义工具栏</button>
+    <button class="btn" onclick="disableContextmenu()">禁用右键菜单</button>
+    <button class="btn" onclick="enableContextmenu()">启用右键菜单</button>
+    <button class="btn" onclick="customContextmenu()">自定义右键菜单</button>
+    <button class="btn" id="rotateBtn" onclick="autoRotate()">开启自动旋转</button>
+    <button class="btn" onclick="ZoomInLimit()">放大限制</button>
+    <button class="btn" onclick="ZoomOutLimit()">缩小限制</button>
+    <button class="btn" onclick="OribitLimit()">旋转限制</button>
+    <button class="btn" onclick="viewFit()">定位选中构件</button>
+    <button class="btn" onclick="viewFitBounds()">定位边界框</button>
+    <button class="btn" id="viewcubeBtn" onclick="viewcube()">隐藏ViewCube</button>
+    <button class="btn" id="pickBtn" onclick="pickSwitch()">禁用鼠标选择</button>
+    <button class="btn" id="switchBtn" onclick="boxChoose()">关闭框选</button>
+
+    <button class="btn" id="hideBtn" onclick="hideComponent()">隐藏选中构件</button>
+    <button class="btn" id="isolateBtn" onclick="isolateComponent()">隔离选中构件</button>
+    <button class="btn" id="colorBtn" onclick="colorComponent()">着色选中构件</button>
+    <button class="btn" onclick="getInfo()">获取选中构件信息</button>
+
+    <button class="btn" onclick="getCamera()">获取视口</button>
+    <button class="btn" onclick="setCamera()">设置视口</button>
+
+</div>
+<div style="height: calc(100% - 84px)">
+    <bim-widget2/>
+</div>
+<script>
+    var bimElement = document.querySelector("bim-widget2")
+    var bim = bimElement.getVueInstance()
+
+    var toolbarExt = []
+    toolbarExt.push({
+        name: '全屏切换', icon: 'el-icon-full-screen', click: () => {
+            bim.fullScreen(document.body)
+        }
+    })
+    bim.toolbarExt = toolbarExt
+
+    bim.init({
+        bimbackUrl: 'http://bimengine.dhcad.cn/bim/',
+        userId: 'd6831b7e73074da0a3b5',
+        secretId: '39d468348e1845cc96a2',
+        projectId: '70995e1873bd4418ae70'
+    }, () => {
+        bim.addModelsByProjectId('70995e1873bd4418ae70', () => {
+            console.log("加载完成")
+        })
+    })
+
+    function disableDefaultToolbar() {
+        // 禁用默认工具栏
+        bim.defaultToolbar = false
+    }
+
+    function enableDefaultToolbar() {
+        // 启用默认工具栏
+        bim.defaultToolbar = true
+    }
+
+    function changeDefaultToolbar() {
+        // 通过修改visible、icon属性设置工具栏按钮的可见性和图标
+        bim.defaultToolbarOptions = [
+            {type: 'transform', visible: true, icon: 'el-icon-orange'},
+            {type: 'main', visible: true, icon: 'el-icon-coffee'},
+            {type: 'section', visible: true, icon: 'el-icon-ice-drink'},
+            {type: 'explode', visible: true, icon: 'el-icon-s-grid'},
+            {type: 'measure', visible: true, icon: 'HHBIM iconziyuan'},
+            {type: 'tree', visible: true, icon: 'HHBIM icontree-table'},
+            {type: 'property', visible: true, icon: 'el-icon-tickets'},
+            {type: 'roamMode', visible: true, icon: 'el-icon-user'},
+            {type: 'pathRoam', visible: true, icon: 'el-icon-position'},
+            {type: 'markup2D', visible: false, icon: 'el-icon-edit-outline'},
+            {type: 'markup3D', visible: false, icon: 'el-icon-location-information'},
+            {type: 'library', visible: false, icon: 'el-icon-box'},
+            {type: 'api', visible: false, icon: 'el-icon-set-up'},
+            {type: 'animation', visible: false, icon: 'el-icon-video-play'},
+            {type: 'videoMix', visible: false, icon: 'el-icon-video-camera'},
+            {type: 'grid', visible: false, icon: 'el-icon-menu'},
+            {type: '2D3D', visible: false, icon: 'HHBIM iconersanweiliandong'},
+            {type: 'level', visible: false, icon: 'HHBIM iconlouceng'},
+            {type: 'minimap', visible: false, icon: 'el-icon-map-location'},
+            {type: 'setting', visible: true, icon: 'el-icon-setting'}
+        ]
+    }
+
+    function customToolbar() {
+        // 自定义工具栏：名称、图标、点击事件
+        var toolbarExt = []
+        toolbarExt.push({
+            name: '自定义1', icon: 'el-icon-truck', click: () => {
+                alert('自定义1')
+            }
+        })
+        bim.toolbarExt = toolbarExt
+    }
+
+    function disableContextmenu() {
+        // 禁用右键菜单
+        bim.menuDisabled = true
+    }
+
+    function enableContextmenu() {
+        // 启用右键菜单
+        bim.menuDisabled = false
+    }
+
+    function customContextmenu() {
+        // 自定义右键菜单，包含名称和点击函数，禁用函数及分组
+        var contextmenuExt = []
+        contextmenuExt.push({
+            name: '自定义1', click: () => {
+                alert('自定义1')
+            }
+        })
+        contextmenuExt.push(
+            {
+                name: '自定义2',
+                click: () => {
+                    alert('自定义2')
+                },
+                disabled: () => {
+                    return true
+                }
+            }
+        )
+        contextmenuExt.push({
+            name: '分组',
+            children: [
+                {
+                    name: '子1', click: () => {
+                        alert('子1')
+                    }
+                },
+                {
+                    name: '子2', click: () => {
+                        alert('子2')
+                    }
+                }
+            ]
+        })
+        bim.contextmenuExt = contextmenuExt
+    }
+
+    var isRotateActivated = false
+
+    function autoRotate() {
+        bim.autoRotate(!isRotateActivated)
+        isRotateActivated = !isRotateActivated
+        if (isRotateActivated) {
+            document.getElementById('rotateBtn').innerText = '停止中心旋转'
+        } else {
+            document.getElementById('rotateBtn').innerText = '开启中心旋转'
+        }
+    }
+
+    function ZoomInLimit() {
+        // 设置放大限制距离
+        bim.setZoomInLimitDistance(100)
+    }
+
+    function ZoomOutLimit() {
+        // 设置缩小限制距离
+        bim.setZoomOutLimitDistance(300)
+    }
+
+    function OribitLimit() {
+        // 设置旋转限制
+        bim.setOribitLimitState(true)
+    }
+
+    var selIds
+    bimElement.addEventListener('selected', (event) => {
+        // 选中构件id
+        selIds = event.detail[0]
+    })
+
+    // 输出hover构件id
+    bimElement.addEventListener('hover', (event) => {
+        if (event.detail[0].length > 0) {
+            console.log(event.detail[0])
+        }
+    })
+
+    function viewFit() {
+        if (selIds.length === 0) {
+            return
+        }
+        // 定位选中构件
+        bim.viewFit({ids: selIds})
+    }
+
+    function viewFitBounds() {
+        if (selIds.length === 0) {
+            return
+        }
+        // 获取选中构件的边界框
+        var bounds = bim.getBoundingBox(selIds[0])
+        // 定位边界框
+        bim.viewFitBounds(false, bounds)
+    }
+
+    var isViewCubeShow = true
+
+    function viewcube() {
+        isViewCubeShow = !isViewCubeShow
+        if (isViewCubeShow) {
+            bim.showViewCube()
+            document.getElementById('viewcubeBtn').innerText = '隐藏ViewCube'
+        } else {
+            bim.hideViewCube()
+            document.getElementById('viewcubeBtn').innerText = '显示ViewCube'
+        }
+    }
+
+    var isPickActivated = true
+
+    function pickSwitch() {
+        bim.setPickDisabled(isPickActivated)
+        isPickActivated = !isPickActivated
+        if (isPickActivated) {
+            document.getElementById('pickBtn').innerText = '禁用鼠标选择'
+        } else {
+            document.getElementById('pickBtn').innerText = '开启鼠标选择'
+        }
+    }
+
+
+    // 鼠标移至三维框口进行聚焦
+    // 避免键盘事件监听不到
+    document.getElementById('viewDom').addEventListener('mouseover', (event) => {
+        event.target.focus()
+    })
+
+    // 框选功能：
+    var isActivated = true
+
+    function boxChoose() {
+        isActivated = !isActivated
+        if (isActivated) {
+            document.getElementById('switchBtn').innerText = '关闭框选'
+        } else {
+            document.getElementById('switchBtn').innerText = '开启框选'
+        }
+        bim.boxChoose(isActivated)
+    }
+
+    var isHide = false
+
+    function hideComponent() {
+        if (isHide) {
+            bim.resetVisibility()
+            document.getElementById('hideBtn').innerText = '隐藏选中构件'
+        } else {
+            if (selIds.length === 0) {
+                return
+            }
+            bim.setVisibility({ids: selIds, visible: false})
+            document.getElementById('hideBtn').innerText = '取消隐藏'
+        }
+        isHide = !isHide
+    }
+
+    var isIsolate = false
+
+    function isolateComponent() {
+        if (isIsolate) {
+            bim.resetVisibility()
+            document.getElementById('isolateBtn').innerText = '隔离选中构件'
+        } else {
+            if (selIds.length === 0) {
+                return
+            }
+            // 第二个参数决定其他构件是隐藏还是半透明
+            bim.isolate(selIds, true)
+            document.getElementById('isolateBtn').innerText = '取消隔离'
+        }
+        isIsolate = !isIsolate
+    }
+
+    var isColor = false
+    var coloredIds
+
+    function colorComponent() {
+        if (isColor) {
+            bim.resetColor({ids: coloredIds})
+            coloredIds = []
+            document.getElementById('colorBtn').innerText = '着色选中构件'
+        } else {
+            if (selIds.length === 0) {
+                return
+            }
+            coloredIds = [...selIds]
+            bim.setColor({ids: selIds, color: '#ff000080'})
+            document.getElementById('colorBtn').innerText = '恢复颜色'
+        }
+        isColor = !isColor
+    }
+
+    function getInfo() {
+        // 获取当前所选构件的id
+        var selIds = bim.getSelected()
+        if (selIds.length === 0) {
+            return
+        }
+        // 获取构件属性信息
+        bim.getProperty(selIds[0], (property) => {
+            console.log('构件属性信息', property)
+        })
+    }
+
+
+    var camera
+
+    function getCamera() {
+        camera = JSON.stringify(bim.getCamera())
+    }
+
+    function setCamera() {
+        var c = JSON.parse(camera)
+        c.duration = 500
+        bim.setCamera(c)
+    }
+
+</script>
+</body>
+</html>

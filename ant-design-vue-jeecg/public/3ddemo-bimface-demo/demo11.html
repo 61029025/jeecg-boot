@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>GIS场景效果</title>
+    <style media="screen">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+        }
+
+        .model {
+            height: 100%
+        }
+    </style>
+    <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"></script>
+</head>
+
+<body>
+<div class='main'>
+    <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+    <div class='model' id="domId"></div>
+</div>
+<script type="text/javascript">
+    // 声明 viewer 及 app
+    let viewer, app;
+    // 声明 UI管理器、主工具条、自定义工具条、图层管理器
+    let uiMng, mainToolbar, toolbar, layerMng, extLayer;
+    let layerId = '2154800498944640';
+    let viewToken = 'dd689167db8843f9a9153f67ce6f4b00';
+
+    // 初始化SDKLoader
+    let BimfaceLoaderConfig = new BimfaceSDKLoaderConfig();
+    BimfaceLoaderConfig.viewToken = viewToken;
+    BimfaceSDKLoader.load(BimfaceLoaderConfig, onSDKLoadSucceeded, onSDKLoadFailed);
+
+    // 资源加载成功的回调函数
+    function onSDKLoadSucceeded(viewMetaData) {
+
+        // 构造app
+        let dom4Show = document.getElementById('domId');
+        let webAppConfig = new Glodon.Bimface.Application.WebApplicationGISConfig();
+        webAppConfig.domElement = dom4Show;
+        app = new Glodon.Bimface.Application.WebApplicationGIS(webAppConfig);
+
+        // 获取viewer并加载场景
+        viewer = app.getViewer();
+        viewer.addScene(viewToken);
+
+        // 场景加载的监听事件，场景加载后获取主工具条、管理器等对象
+        viewer.addEventListener(Glodon.Bimface.Viewer.ViewerGISEvent.SceneAdded, function () {
+            // 获取图层管理器
+            layerMng = viewer.getLayerManager();
+            // 获取UI管理器
+            uiMng = app.getUIManager();
+            // 获取主工具条
+            mainToolbar = uiMng.getToolbar('MainToolbar');
+            // 初始化天空盒效果
+            initSkyBox();
+            // 调整地图样式
+            setMapStyle();
+            // 添加自定义工具条
+            addToolbar();
+
+            // 添加外部构件图层，用于挂接飞线效果
+            extLayer = new Glodon.Bimface.Layer.ExternalObjectLayer({
+                name: "飞线",
+                id: 'extLayerId',
+                isVisible: true
+            });
+            layerMng.addLayer(extLayer);
+        });
+
+        // 图层加载完毕的监听事件，图层加载后对模型进行着色
+        viewer.addEventListener(Glodon.Bimface.Viewer.ViewerGISEvent.LayerAdded, function (data) {
+            if (data.layerId == layerId) {
+                // 构件着色
+                overrideColor();
+            }
+        });
+    }
+
+    // 资源加载失败的回调函数
+    function onSDKLoadFailed(error) {
+        console.log(error);
+    };
+
+    // 添加自定义工具条
+    function addToolbar() {
+
+        // 构造自定义工具条对象
+        toolbar = new Glodon.Bimface.Tiles.UI.Toolbar({
+            id: 'toolbar',  // 工具条ID
+            isHorizontal: true,  // 工具条的方向，可设置为水平或垂直
+            controlAlign: Glodon.Bimface.Tiles.UI.ControlAlignOption.Center  // 按钮在工具条中的对齐方式，当前设置为居中
+        });
+
+        // 在工具条中添加按钮
+        toolbar.addControl(addWaterButton());
+        toolbar.addControl(addGlowButton());
+        toolbar.addControl(addFlyCurveButton());
+        toolbar.addControl(addWallEffectButton());
+        toolbar.addControl(addPlaneScanButton());
+        toolbar.addControl(addRingScanButton());
+        toolbar.addControl(addFanScanButton());
+
+        // 将工具条添加至UI管理器中，并设置工具条在div中的位置，这里设置了底部居中并向上偏移20px
+        uiMng.addControl(toolbar, {
+            position: {
+                anchor: Glodon.Bimface.Tiles.UI.ControlAnchor.BottomCenter,
+                offset: { x: 0, y: -20 }
+            }
+        });
+    }
+
+    // 添加水面效果的按钮
+    function addWaterButton() {
+        // 构造按钮对象
+        btn_water = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_water',
+        });
+
+        // 设置按钮的显示文字、tooltips
+        btn_water.setText('水面效果');
+        btn_water.setTooltip('水面效果');
+
+        // 设置按钮的点击事件
+        btn_water.onClick(function () {
+            // 添加水域效果
+            addWater();
+            if (isWaterAdded) {
+                btn_water.setText('移除水面');
+                btn_water.setTooltip('移除水面');
+            } else {
+                btn_water.setText('水面效果');
+                btn_water.setTooltip('水面效果');
+            }
+        });
+        return btn_water;
+    }
+
+    // 添加发光效果的按钮
+    function addGlowButton() {
+        // 构造按钮对象
+        btn_glow = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_glow',
+        });
+
+        // 设置按钮的显示文字、tooltips
+        btn_glow.setText('发光效果');
+        btn_glow.setTooltip('发光效果');
+
+        // 设置按钮的点击事件
+        btn_glow.onClick(function () {
+            // 添加水域效果
+            addGlowEffect();
+            if (isGlowEffectAdded) {
+                btn_glow.setText('清除发光');
+                btn_glow.setTooltip('清除发光');
+            } else {
+                btn_glow.setText('发光效果');
+                btn_glow.setTooltip('发光效果');
+            }
+        });
+        return btn_glow;
+    }
+
+    // 添加飞线效果的按钮
+    function addFlyCurveButton() {
+        // 构造按钮对象
+        btn_flyCurve = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_flyCurve',
+        });
+
+        // 设置按钮的显示文字、tooltips
+        btn_flyCurve.setText('飞线动画');
+        btn_flyCurve.setTooltip('飞线动画');
+
+        // 设置按钮的点击事件
+        btn_flyCurve.onClick(function () {
+            // 添加飞线动画
+            addFlyCurveAnimation();
+            if (isFlyCurveAdded) {
+                btn_flyCurve.setText('暂停播放');
+                btn_flyCurve.setTooltip('暂停播放');
+            } else {
+                btn_flyCurve.setText('飞线动画');
+                btn_flyCurve.setTooltip('飞线动画');
+            }
+        });
+        return btn_flyCurve;
+    }
+
+    // 添加电子围墙的按钮
+    function addWallEffectButton() {
+        // 构造按钮对象
+        btn_wallEffect = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_wallEffect',
+        });
+
+        // 设置按钮的显示文字、tooltips
+        btn_wallEffect.setText('电子围墙');
+        btn_wallEffect.setTooltip('电子围墙');
+
+        // 设置按钮的点击事件
+        btn_wallEffect.onClick(function () {
+            // 添加电子围墙
+            addWallEffect();
+            if (isWallEffectAdded) {
+                btn_wallEffect.setText('清除围墙');
+                btn_wallEffect.setTooltip('清除围墙');
+            } else {
+                btn_wallEffect.setText('电子围墙');
+                btn_wallEffect.setTooltip('电子围墙');
+            }
+        });
+        return btn_wallEffect;
+    }
+
+    // 添加平面扫描效果的按钮
+    function addPlaneScanButton() {
+        // 构造按钮对象
+        btn_planeScan = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_planeScan',
+        });
+
+        // 设置按钮的显示文字、tooltips
+        btn_planeScan.setText('平面扫描');
+        btn_planeScan.setTooltip('平面扫描');
+
+        // 设置按钮的点击事件
+        btn_planeScan.onClick(function () {
+            // 添加平面扫描效果
+            addPlaneScanEffect();
+            if (isPlaneScanEffectAdded) {
+                btn_planeScan.setText('清除扫描');
+                btn_planeScan.setTooltip('清除扫描');
+            } else {
+                btn_planeScan.setText('平面扫描');
+                btn_planeScan.setTooltip('平面扫描');
+            }
+        });
+        return btn_planeScan;
+    }
+
+    // 添加环状扫描的按钮
+    function addRingScanButton() {
+        // 构造按钮对象
+        btn_ringScan = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_ringScan',
+        });
+
+        // 设置按钮的显示文字、tooltips
+        btn_ringScan.setText('环状扫描');
+        btn_ringScan.setTooltip('环状扫描');
+
+        // 设置按钮的点击事件
+        btn_ringScan.onClick(function () {
+            // 添加环状扫描
+            addRingScan();
+            if (isRingScanEffectAdded) {
+                btn_ringScan.setText('清除扫描');
+                btn_ringScan.setTooltip('清除扫描');
+            } else {
+                btn_ringScan.setText('环状扫描');
+                btn_ringScan.setTooltip('环状扫描');
+            }
+        });
+        return btn_ringScan;
+    }
+
+    // 添加扇形扫描的按钮
+    function addFanScanButton() {
+        // 构造按钮对象
+        btn_fanScan = new Glodon.Bimface.Tiles.UI.Button({
+            id: 'btn_fanScan',
+        });
+
+        // 设置按钮的显示文字、tooltips
+        btn_fanScan.setText('扇形扫描');
+        btn_fanScan.setTooltip('扇形扫描');
+
+        // 设置按钮的点击事件
+        btn_fanScan.onClick(function () {
+            // 添加扇形扫描
+            addFanScan();
+            if (isFanScanEffectAdded) {
+                btn_fanScan.setText('清除扫描');
+                btn_fanScan.setTooltip('清除扫描');
+            } else {
+                btn_fanScan.setText('扇形扫描');
+                btn_fanScan.setTooltip('扇形扫描');
+            }
+        });
+        return btn_fanScan;
+    }
+
+    isColorOverrided = false;
+    // 构件着色
+    function overrideColor() {
+        layerMng.getLayer(layerId).getComponentManager().overrideColor({ all: true }, new Glodon.Web.Graphics.Color(200, 200, 200, 0.35));
+        layerMng.getLayer(layerId).getComponentManager().overrideColor({ ids: ["10003", "10004", "10005", "10008", "10011"] }, new Glodon.Web.Graphics.Color(131, 206, 208, 0.45));
+        viewer.render();
+    }
+
+    let isWaterAdded = false;
+    let waterEffect;
+    // 添加水面效果
+    function addWater() {
+        if (!isWaterAdded) {
+            // 定义水面效果的构件
+            let waterIds =
+                [
+                    {
+                        layerId: layerId,
+                        objectIds: [
+                            '10063'
+                        ]
+                    }
+                ];
+
+            // 构造水面效果配置项
+            let waterEffectConfig = new Glodon.Bimface.Plugins.Animation.WaterEffectConfig();
+            waterEffectConfig.ids = waterIds;
+            waterEffectConfig.viewer = viewer;
+            // 设置水面的流动效果
+            waterEffectConfig.flow = true;
+
+            // 构造水面效果对象
+            waterEffect = new Glodon.Bimface.Plugins.Animation.WaterEffect(waterEffectConfig);
+            waterEffect.setColor(new Glodon.Web.Graphics.Color(18, 30, 41, 1));
+            waterEffect.setScale(2);
+            waterEffect.setXDirection(0.2);
+            waterEffect.setYDirection(2);
+
+        } else {
+            // 清除水漫效果
+            waterEffect.destroy();
+            layerMng.getLayer(layerId).getComponentManager().overrideColor({ ids: ["10063"] }, new Glodon.Web.Graphics.Color(200, 200, 200, 0.55));
+
+        }
+        isWaterAdded = !isWaterAdded;
+    }
+
+    let isGlowEffectAdded = false;
+    // 添加发光效果
+    function addGlowEffect() {
+        if (!isGlowEffectAdded) {
+            viewer.enableGlowEffect(true);
+            layerMng.getLayer(layerId).getComponentManager().setGlowEffectById(["10026", "10039", "10040", "10041", "10042", "10046", "10047", "10048", "10049"], { type: "body", color: new Glodon.Web.Graphics.Color(50, 211, 166, 1), intensity: 0.6, spread: 3 });
+            layerMng.getLayer(layerId).getComponentManager().setGlowEffectById(["10023", "10035", "10045", "10051", "10056"], { type: "body", color: new Glodon.Web.Graphics.Color(255, 229, 89, 1), intensity: 0.6, spread: 3 });
+            layerMng.getLayer(layerId).getComponentManager().setGlowEffectById(["10053", "10054", "10055"], { type: "outline", color: new Glodon.Web.Graphics.Color(255, 255, 160, 1), intensity: 0.3, spread: 3 });
+        } else {
+            // 清除发光效果
+            layerMng.getLayer(layerId).getComponentManager().clearGlowEffect();
+            viewer.enableGlowEffect(false);
+        }
+        isGlowEffectAdded = !isGlowEffectAdded;
+    }
+
+    let isFlyCurveAdded = false;
+    let flyCurve;
+    let flyCurveIds = [];
+    let path = [];
+    let flyCurvePoints = [];
+    // 添加飞线效果
+    function addFlyCurve() {
+        // 构造外部构件管理器
+        let extObjMng = extLayer.getExternalObjectManager();
+        if (!isFlyCurveAdded) {
+            // 定义飞线的起点和终点
+            let centerPoint = { "x": -1009, "y": -1054, "z": 128 };//{ x: -323, y: -1322, z: 40 };
+            let targetPoints = [{ "x": -1486, "y": -1782, "z": 174 }, { "x": -1763, "y": -995, "z": 189 }, { "x": -1030, "y": -557, "z": 105 }, { "x": -259, "y": -1078, "z": 120 }, { "x": -929, "y": -1658, "z": 83 }];
+            for (i = 0; i < targetPoints.length; i++) {
+                let flyCurve_Points = [centerPoint, targetPoints[i]];
+                flyCurvePoints.push(flyCurve_Points);
+            }
+            // 定义飞线的颜色
+            let color = new Glodon.Web.Graphics.Color(255, 237, 141, 1.0);
+            // 定义飞线的宽度
+            let width = 8;
+            // 定义飞线的线条样式
+            let style = {
+                "lineType": "Continuous",
+                "lineStyle": null
+            };
+
+            let count = 0;
+            for (let i = 0; i < flyCurvePoints.length; i++) {
+                // 构造曲线
+                flyCurve = new Glodon.Bimface.Plugins.Geometry.SplineCurve(flyCurvePoints[i], color, width, style);
+                path.push(flyCurve);
+                // 拉伸曲线
+                flyCurve.stretch(0.8, 0.5);
+                // 设置宽度类型
+                flyCurve.setWidthType("ActualWidth");
+                // 设置宽度
+                flyCurve.setWidth(15);
+                // 设置曲线贴图
+                flyCurve.setMap({
+                        src: "https://static.bimface.com/attach/f4b5c5e71fce4090a63fc1c2e3839bd2_dynamic(1).png",
+                        // 允许颜色覆盖
+                        enableColorOverride: true
+                    },
+                    function () {
+                        let flyCurveName = "flyCurve" + count;
+                        extObjMng.loadObject({ name: flyCurveName, object: path[count] });
+                        let flyCurveId = extObjMng.getObjectIdByName(flyCurveName);
+                        flyCurveIds.push(flyCurveId);
+                        count++;
+                    });
+            }
+        } else {
+            for (let i = 0; i < flyCurveIds.length; i++) {
+                extObjMng.removeById(flyCurveIds[i]);
+            }
+            flyCurveIds = [];
+            console.log(flyCurveIds);
+        }
+        isFlyCurveAdded = !isFlyCurveAdded;
+    }
+
+    let iscurveAnimationAdded = false;
+    let isCurveAdded = false;
+    // 构造飞线动画
+    function addFlyCurveAnimation() {
+        if (!isCurveAdded) {
+            addFlyCurve();
+            // 构造曲线动画的配置项
+            curveAnimationConfig = new Glodon.Bimface.Plugins.Animation.CurveAnimationConfig();
+            // 配置Viewer对象、曲线对象、动画时间、动画循环、动画类型等参数
+            curveAnimationConfig.viewer = viewer;
+            curveAnimationConfig.curves = path;
+            curveAnimationConfig.time = 2000;
+            curveAnimationConfig.loop = true;
+            curveAnimationConfig.type = "flow";
+            // 构造曲线动画对象
+            curveAnimation = new Glodon.Bimface.Plugins.Animation.CurveAnimation(curveAnimationConfig);
+            isCurveAdded = true;
+        };
+        if (!iscurveAnimationAdded) {
+            // 播放动画
+            curveAnimation.play();
+        } else {
+            // 停止动画
+            curveAnimation.stop();
+        }
+        iscurveAnimationAdded = !iscurveAnimationAdded;
+    }
+
+    let isWallEffectAdded = false;
+    let wallEffect;
+    // 添加电子围墙效果
+    function addWallEffect() {
+        if (!isWallEffectAdded) {
+            // 构造电子围墙效果配置项
+            let wallEffectConfig = new Glodon.Bimface.Plugins.Animation.WallEffectConfig();
+            // 配置Viewer对象、方向、持续时间、路径、高度
+            wallEffectConfig.viewer = viewer;
+            wallEffectConfig.direction = {
+                type: "Tangent",  // 运动方式为沿着路径的切线方向
+                reverse: false    // 运动方向默认为逆时针
+            }
+            wallEffectConfig.duration = 2500;
+            wallEffectConfig.height = 80;
+            wallEffectConfig.stretch = true;
+            wallEffectConfig.material = initMat();
+            wallEffectConfig.path =
+                [
+                    { "x": -814.1, "y": -1219.5, "z": 0 },
+                    { "x": -323.6, "y": -972.7, "z": 0 },
+                    { "x": 326.5, "y": -1655.6, "z": 0 },
+                    { "x": 749, "y": -2172.3, "z": 0 },
+                    { "x": 505, "y": -2292.8, "z": 0 },
+                    { "x": 365, "y": -2325.2, "z": 0 },
+                    { "x": -101.9, "y": -2202.1, "z": 0 },
+                    { "x": -517.7, "y": -2235.5, "z": 0 },
+                    { "x": -723.7, "y": -1729, "z": 0 },
+                    { "x": -814.1, "y": -1219.5, "z": 0 }
+                ];
+
+            // 电子围墙颜色
+            wallEffectConfig.color = new Glodon.Web.Graphics.Color(252, 29, 29, 0.8); //Color(50, 211, 166, 0.8);
+            // 构造电子围墙扫描效果对象
+            wallEffect = new Glodon.Bimface.Plugins.Animation.WallEffect(wallEffectConfig);
+        } else {
+            // 清除电子围墙效果
+            wallEffect.destroy();
+        }
+        isWallEffectAdded = !isWallEffectAdded;
+    }
+
+    let planeScanEffect, material;
+    let isPlaneScanEffectAdded = false;
+    // 平面扫描效果
+    function addPlaneScanEffect() {
+        if (!isPlaneScanEffectAdded) {
+            // 创建材质
+            material = initMat();
+            // 构造平面扫描效果配置项
+            let planeScanEffectConfig = new Glodon.Bimface.Plugins.Animation.PlaneScanEffectConfig();
+            // 配置Viewer对象、方向、持续时间、边界
+            planeScanEffectConfig.viewer = viewer;
+            planeScanEffectConfig.direction = { x: 0.6, y: 0.8, z: 0 };
+            planeScanEffectConfig.duration = 3000;
+            planeScanEffectConfig.boundary = [
+                { "x": -814.1, "y": -1219.5, "z": 0 },
+                { "x": -323.6, "y": -972.7, "z": 0 },
+                { "x": 326.5, "y": -1655.6, "z": 0 },
+                { "x": 749, "y": -2172.3, "z": 0 },
+                { "x": 505, "y": -2292.8, "z": 0 },
+                { "x": 365, "y": -2325.2, "z": 0 },
+                { "x": -101.9, "y": -2202.1, "z": 0 },
+                { "x": -517.7, "y": -2235.5, "z": 0 },
+                { "x": -723.7, "y": -1729, "z": 0 },
+                { "x": -814.1, "y": -1219.5, "z": 0 }
+            ];
+            // 设置水平扫描颜色
+            planeScanEffectConfig.color = new Glodon.Web.Graphics.Color(252, 29, 29, 0.8);
+            // 设置水平扫描材质
+            planeScanEffectConfig.material = material;
+            // 设置材质与颜色的混合参数
+            planeScanEffectConfig.blendingRatio = 0.3;
+            // 构造水平扫描效果对象
+            planeScanEffect = new Glodon.Bimface.Plugins.Animation.PlaneScanEffect(planeScanEffectConfig);
+        } else {
+
+            // 清除水平扫描效果
+            planeScanEffect.destroy();
+        }
+        isPlaneScanEffectAdded = !isPlaneScanEffectAdded;
+    }
+
+    // 初始化材质
+    function initMat() {
+        let materialConfig = new Glodon.Bimface.Plugins.Material.MaterialConfig();
+        materialConfig.viewer = viewer;
+        materialConfig.src = "https://static.bimface.com/attach/3e8cedfed7a04c8e9cb115ce192e209f_big.png";
+        return new Glodon.Bimface.Plugins.Material.Material(materialConfig);
+    }
+
+    let isRingScanEffectAdded = false;
+    let ringScanEffect
+    // 添加环状扫描效果
+    function addRingScan() {
+        if (!isRingScanEffectAdded) {
+            // 构造环状扫描效果配置项
+            ringScanEffectConfig = new Glodon.Bimface.Plugins.Animation.RingScanEffectConfig();
+            // 配置Viewer对象、颜色、持续时间、位置、半径、衰减力度等参数
+            ringScanEffectConfig.viewer = viewer;
+            ringScanEffectConfig.color = new Glodon.Web.Graphics.Color(252, 29, 29, 1);
+            ringScanEffectConfig.duration = 2000;
+            ringScanEffectConfig.originPosition = { x: 423, y: -221, z: 5 };
+            ringScanEffectConfig.radius = 250;
+            ringScanEffectConfig.progressive = 5;
+            // 构造环状扫描效果对象
+            ringScanEffect = new Glodon.Bimface.Plugins.Animation.RingScanEffect(ringScanEffectConfig);
+        } else {
+            // 清除环状扫描效果
+            ringScanEffect.destroy();
+        }
+        isRingScanEffectAdded = !isRingScanEffectAdded;
+    }
+
+    let isFanScanEffectAdded = false;
+    let fanScanEffect
+    // 添加扇形扫描效果
+    function addFanScan() {
+        if (!isFanScanEffectAdded) {
+            // 构造扇形扫描效果配置项
+            fanScanEffectConfig = new Glodon.Bimface.Plugins.Animation.FanScanEffectConfig();
+            // 配置Viewer对象、背景颜色、扫描颜色、持续时间、扇形角度、位置、扫描半径等参数
+            fanScanEffectConfig.viewer = viewer;
+            fanScanEffectConfig.backgroundColor = new Glodon.Web.Graphics.Color(0, 0, 0, 0.05);
+            fanScanEffectConfig.color = new Glodon.Web.Graphics.Color(252, 29, 29, 0.8);
+            fanScanEffectConfig.duration = 2000;
+            fanScanEffectConfig.fanAngle = Math.PI;
+            fanScanEffectConfig.originPosition = { x: -1008, y: -1057, z: 1 };
+            fanScanEffectConfig.radius = 250;
+            // 构造扇形扫描效果对象
+            fanScanEffect = new Glodon.Bimface.Plugins.Animation.FanScanEffect(fanScanEffectConfig);
+        } else {
+            // 清除扇形扫描效果
+            fanScanEffect.destroy();
+        }
+        isFanScanEffectAdded = !isFanScanEffectAdded;
+    }
+
+    // 初始化天空盒效果
+    function initSkyBox() {
+        // 构造天空盒管理器配置项，并指定Viewer、Option参数
+        let skyBoxManagerConfig = new Glodon.Bimface.Plugins.SkyBox.SkyBoxManagerConfig();
+        skyBoxManagerConfig.viewer = viewer;
+        skyBoxManagerConfig.style = Glodon.Bimface.Plugins.SkyBox.SkyBoxStyle.DarkNight;
+        // 构造天空盒管理器，构造完成后，场景背景即发生变化
+        let skyBoxManager = new Glodon.Bimface.Plugins.SkyBox.SkyBoxManager(skyBoxManagerConfig);
+    }
+
+    // 调整地图样式
+    function setMapStyle() {
+        let baseMap = layerMng.baseMap;
+        baseMap.setStyle({
+            "template": Glodon.Bimface.Common.ImageStyle.DarkBlue, "brightness": 0.5, "saturation": -0.4
+        });
+    }
+
+</script>
+</body>
+
+</html>

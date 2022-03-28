@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>场地拍平</title>
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .buttons {
+            font-size: 0;
+        }
+
+        .button {
+            margin: 5px 0 5px 5px;
+            width: 100px;
+            height: 30px;
+            border-radius: 3px;
+            border: none;
+            background: #32D3A6;
+            color: #FFFFFF;
+            outline: none;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        #domId {
+            flex: 1;
+        }
+    </style>
+    <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"></script>
+</head>
+
+<body>
+<div class='main'>
+    <div class='buttons'>
+        <button class="button" id="btnFlattenTerrain" onclick="flattenTerrain()">场地拍平</button>
+    </div>
+    <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+    <div id="domId"></div>
+</div>
+<script type="text/javascript">
+    let viewToken = '6e737c0333c8469d8b5d7247f349fe08';
+    // 声明Viewer及App
+    let viewer3D;
+    let app;
+    let viewAdded = false;
+
+    // 配置JSSDK加载项
+    window.onload = function () {
+        let loaderConfig = new BimfaceSDKLoaderConfig();
+        loaderConfig.viewToken = viewToken;
+        BimfaceSDKLoader.load(loaderConfig, successCallback, failureCallback);
+    }
+
+    // 加载成功回调函数
+    function successCallback(viewMetaData) {
+        let dom4Show = document.getElementById('domId');
+        // 设置WebApplication3D的配置项
+        let webAppConfig = new Glodon.Bimface.Application.WebApplication3DConfig();
+        webAppConfig.enableLodDemDom = true;
+        webAppConfig.domElement = dom4Show;
+        webAppConfig.enableLogarithmicDepthBuffer = true;
+        // 创建WebApplication3D，用以显示模型
+        app = new Glodon.Bimface.Application.WebApplication3D(webAppConfig);
+        app.addView(viewToken);
+        viewer3D = app.getViewer();
+        // 增加加载完成监听事件
+        viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, function () {
+            viewAdded = true;
+            //自适应屏幕大小
+            window.onresize = function () {
+                viewer3D.resize(document.documentElement.clientWidth, document.documentElement.clientHeight - 40);
+            }
+            // 加载地图
+            loadMap();
+            // 渲染场景
+            viewer3D.render();
+        });
+    }
+
+    // 加载失败回调函数
+    function failureCallback(error) {
+        console.log(error);
+    }
+
+    let map;
+    function loadMap() {
+        if (!viewAdded) {
+            return;
+        }
+        // 构造地图配置项
+        let mapConfig = new Glodon.Bimface.Plugins.TileMap.MapConfig();
+        mapConfig.viewer = viewer3D;
+        // 设置模型载入的基点
+        mapConfig.basePoint = {
+            "x": -85689.088,
+            "y": -62066.347
+        }
+        // 设置模型载入基点所对应的经纬度
+        mapConfig.modelPosition = [83.62255566511255, 30.357958723638756];
+        // 设置模型的旋转弧度值
+        mapConfig.modelRotationZ = 0 * Math.PI / 180;
+        // 设置模型零零标高对应的高程值，单位为米
+        mapConfig.modelAltitude = 5290;
+        // 设置开启DEM
+        mapConfig.enableElevationModel = true;
+        // 构造地图对象
+        map = new Glodon.Bimface.Plugins.TileMap.Map(mapConfig);
+        // 设置地图类型为天地图的卫星影像，天地图key可在http://lbs.tianditu.gov.cn/server/MapService.html申请
+        map.setMapSource({ url: 'https://t0.tianditu.gov.cn/img_w/wmts?tk=c2afdfb9ed8a55620e5411f98cc85556', provider: 'Tianditu', credit: Glodon.Bimface.Common.Credit.Tianditu });
+        viewer3D.render();
+    }
+
+    let isFlattened = false;
+    let flatManager;
+    let flat;
+    function flattenTerrain() {
+        if (!viewAdded || !map) {
+            return;
+        }
+        let flattenRegionBoundary = [
+            { x: -116684.80730265414, y: 167132.51411297513, z: 0 },
+            { x: -153491.42232832275, y: -108012.5708737743, z: 0 },
+            { x: 269220.988046648, y: -116842.17251575971, z: 0 },
+            { x: 269585.6982228958, y: 176014.6062611448, z: 0 }
+        ];
+        if(!flatManager){
+            // 构造拍平管理器配置项
+            let mngConfig = new Glodon.Bimface.Plugins.Flats.FlatManagerConfig();
+            mngConfig.viewer = viewer3D;
+            // 构造拍平管理器
+            flatManager = new Glodon.Bimface.Plugins.Flats.FlatManager(mngConfig);
+        }
+        if (!isFlattened) {
+            // 构造拍平对象配置项
+            let config = new Glodon.Bimface.Plugins.Flats.FlatConfig();
+            // 配置拍平高度、拍平区域
+            config.elevation = 5285;
+            config.boundary = flattenRegionBoundary;
+            // 构造拍平对象
+            flat = new Glodon.Bimface.Plugins.Flats.Flat(config);
+            // 添加拍平对象至管理器中
+            flatManager.addItem(flat);
+            setButtonText('btnFlattenTerrain', '移除拍平区域');
+        } else {
+            // 根据ID列表移除对应拍平对象
+            flatManager.removeItems([flat.getId()]);
+            setButtonText('btnFlattenTerrain', '拍平场地');
+        }
+        viewer3D.render();
+        isFlattened = !isFlattened;
+    }
+
+    function setButtonText(btnId, text) {
+        let dom = document.getElementById(btnId);
+        if (dom != null && dom.nodeName == "BUTTON") {
+            dom.innerText = text;
+        }
+    }
+</script>
+</body>
+
+</html>

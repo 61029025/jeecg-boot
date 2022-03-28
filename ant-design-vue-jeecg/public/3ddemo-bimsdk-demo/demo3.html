@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>bim demo</title>
+    <link href="/plugins/bimsdk/css/app.css" rel=stylesheet>
+    <script src="/plugins/bimsdk/js/app.js"></script>
+</head>
+
+<body>
+<button class="btn" id="playBtn" onclick="handle()">平移播放</button>
+<button class="btn" onclick="stop()">停止</button>
+<div style="height: calc(100% - 42px)">
+    <bim-widget2/>
+</div>
+<script>
+    var bimElement = document.querySelector("bim-widget2")
+    var bim = bimElement.getVueInstance()
+
+    bim.init({
+        bimbackUrl: 'http://bimengine.dhcad.cn/bim/',
+        userId: 'd6831b7e73074da0a3b5',
+        secretId: '39d468348e1845cc96a2',
+        projectId: '70995e1873bd4418ae70'
+    }, () => {
+        bim.addModelsByProjectId('70995e1873bd4418ae70', () => {
+            console.log("加载完成")
+            // 动画参数
+            let params = {
+                transform: [], // 记录构件偏移位置
+                originTransforms: [] // 记录构件原始位置
+            }
+            //构件每帧的位置偏移量
+            params.transform.push({
+                time: 0,
+                transform: {
+                    position: new THREE.Vector3(),
+                    quaternion: new THREE.Quaternion(),
+                    scale: new THREE.Vector3(1, 1, 1)
+                }
+            })
+            params.transform.push({
+                time: 2,
+                transform: {
+                    position: new THREE.Vector3(0, 0, 100),//平移
+                    quaternion: new THREE.Quaternion(),//new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, Math.PI)),旋转
+                    scale: new THREE.Vector3(1, 1, 1) // scale: new THREE.Vector3(5, 5, 5) 缩放
+                }
+            })
+
+            // params.visibility.push({ 显隐
+            //     time: i * 0.4,
+            //     value: i%2===0
+            // })
+
+            // 图元原始位置信息 调用getTransform获取当前构件的位置
+            ids.forEach(id => {
+                params.originTransforms[id] = bim.getTransform(id)
+            })
+            // 透明动画数据
+            params.opacity.push({
+                time: 0,
+                value: 0
+            })
+            params.opacity.push({
+                time: 4,
+                value: 1
+            })
+
+
+            // 颜色动画数据
+            params.color.push({
+                time: 0,
+                value: '#FF0000'
+            })
+            params.color.push({
+                time: 6,
+                value: '#00DDFF'
+            })
+
+            // 生长动画数据
+            params.cut.push({
+                time: 0,
+                value: {
+                    back: 0,
+                    bottom: 0,
+                    front: 1,
+                    left: 0,
+                    right: 0,
+                    top: 0
+                }
+            })
+            params.cut.push({
+                time: 4,
+                value: {
+                    back: 0,
+                    bottom: 0,
+                    front: 0,
+                    left: 0,
+                    right: 0,
+                    top: 0
+                }
+            })
+            // 创建动画并播放
+            anim = bim.createAnimation(ids, params)
+            console.log("加载完成")
+        })
+    })
+
+    // 动画对象
+    var anim
+    var renderID
+    // 动画开始播放的时间
+    var startTime = 0
+    // 暂停累计时间
+    var playedTime = 0
+    // 动画当前已播放时间
+    var curTime = 0
+
+    var ids = ['14a553b258ff4156a34b-2027', '14a553b258ff4156a34b-2029', '14a553b258ff4156a34b-2030']
+
+    isPlay = false
+
+    function handle() {
+        if (isPlay) {
+            document.getElementById('playBtn').innerText = '播放'
+            pause()
+        } else {
+            document.getElementById('playBtn').innerText = '暂停'
+            play()
+        }
+        isPlay = !isPlay
+    }
+
+    function play() {
+        // 记录播放的时间
+        startTime = Date.now()
+        // 播放动画时 关闭流畅模式 避免对动画效果产生影响
+        bim.setSmoothMode(false)
+        // 播放动画
+        anim.play()
+        // 实时刷新画布
+        animate()
+    }
+
+    function stop() {
+        isPlay = false
+        document.getElementById('playBtn').innerText = '播放'
+        // 暂停累计时间清零
+        playedTime = 0
+        window.cancelAnimationFrame(renderID)
+        // 停止播放动画
+        anim.stop()
+        // 恢复流畅模式
+        bim.setSmoothMode(true)
+    }
+
+    function pause() {
+        if (curTime > 2) {
+            return
+        }
+        playedTime += curTime
+        window.cancelAnimationFrame(renderID)
+        anim.pause()
+        // 恢复流畅模式
+        bim.setSmoothMode(true)
+    }
+
+    function animate() {
+        renderID = window.requestAnimationFrame(animate)
+        curTime = (Date.now() - startTime) / 1000 + playedTime
+        // 播放时间超过动画时间，停止播放
+        if (curTime > 2) {
+            stop()
+            // 恢复流畅模式
+            bim.setSmoothMode(true)
+        }
+        bim.render()
+    }
+
+</script>
+</body>
+
+</html>

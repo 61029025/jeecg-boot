@@ -11,7 +11,19 @@ export default {
   },
   mounted() {
     var viewer = new Cesium.Viewer("cesiumContainer", {
-      terrainProvider: Cesium.createWorldTerrain(),
+      terrainProvider: Cesium.createWorldTerrain({
+        requestVertexNormals: true,
+        requestWaterMask: true
+      }),
+      animation: false, //是否显示动画控件，左下角仪表
+      baseLayerPicker: false, //是否显示图层选择控件,是否显示geocoder小器件，右上角查询按钮
+      geocoder: false, //是否显示地名查找控件
+      timeline: false, //是否显示时间线控件
+      sceneModePicker: false, //是否显示投影方式控件,//是否显示3D/2D选择器
+      navigationHelpButton: false, //是否显示帮助信息控件
+      infoBox: false, //是否显示点击要素之后显示的信息
+      fullscreenButton: false, //是否显示全屏按钮
+      selectionIndicator: false, //是否显示选中指示框
     });
 
     viewer._cesiumWidget._creditContainer.style.display = "none";

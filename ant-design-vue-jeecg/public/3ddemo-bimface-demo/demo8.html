@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>控高分析</title>
+    <style type="text/css">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .buttons {
+            font-size: 0;
+        }
+
+        .button {
+            margin: 5px 0 5px 5px;
+            width: 100px;
+            height: 30px;
+            border-radius: 3px;
+            border: none;
+            background: #32D3A6;
+            color: #FFFFFF;
+            outline: none;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        #domId {
+            flex: 1;
+        }
+    </style>
+
+</head>
+
+<body>
+<div class='main'>
+    <div class='buttons'>
+        <button class="button" id="btnCreateHeightLimit" onclick="createHeightLimit()">限高分析</button>
+        <button class="button" id="btnChangeHeightLimitMode" onclick="update()">全局模式</button>
+    </div>
+    <!-- 定义DOM元素，用于在该DOM元素中显示模型或图纸 -->
+    <div id="domId"></div>
+</div>
+<script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"></script>
+<script>
+    let viewToken = '815ed6426dc04995bcc9586a8cea3767';
+    // 声明Viewer及App
+    let viewer, app;
+    let viewAdded = false;
+
+    // 配置JSSDK加载项
+    window.onload = function () {
+        let loaderConfig = new BimfaceSDKLoaderConfig();
+        loaderConfig.viewToken = viewToken;
+        BimfaceSDKLoader.load(loaderConfig, successCallback, failureCallback);
+    }
+
+    // 加载成功回调函数
+    function successCallback(viewMetaData) {
+        let dom4Show = document.getElementById('domId');
+        // 设置WebApplication3D的配置项
+        let webAppConfig = new Glodon.Bimface.Application.WebApplication3DConfig();
+        webAppConfig.domElement = dom4Show;
+        // 创建WebApplication3D，用以显示模型
+        app = new Glodon.Bimface.Application.WebApplication3D(webAppConfig);
+        app.addView(viewToken);
+        viewer3D = app.getViewer();
+        // 增加加载完成监听事件
+        viewer3D.addEventListener(Glodon.Bimface.Viewer.Viewer3DEvent.ViewAdded, function () {
+            camera3D = viewer3D.getCamera();
+            camera3D.setStatus({ "name": "persp", "position": { "x": 12070780.86201416, "y": 24814569.981817048, "z": 1422197.8328453598 }, "target": { "x": 16859896.131796237, "y": 29603702.907149002, "z": -3366899.8937921366 }, "up": { "x": 0, "y": -0.0000036732056040332493, "z": 0.9999999999932538 }, "near": 558.4999907085842, "far": 5876132.629264688, "zoom": 1, "version": 1, "fov": 45, "aspect": 1.4034188034188033, "coordinateSystem": "world" });
+            // 渲染场景
+            viewAdded = true;
+            // 设置深色背景色
+            viewer3D.setBackgroundColor(new Glodon.Web.Graphics.Color(248, 248, 248, 1));
+            // 关闭模型动画
+            viewer3D.setCameraAnimation(false);
+            // 设置相机视角
+            camera3D.setStatus({ "name": "persp", "position": { "x": 13989618.918485507, "y": 26052164.797100764, "z": 867249.9939034011 }, "target": { "x": 18778734.16813714, "y": 30841297.70230221, "z": -3921847.7126037283 }, "up": { "x": 0, "y": -0.000003673204937016186, "z": 0.9999999999932538 }, "fov": 45, "zoom": 1, "version": 1, "coordinateSystem": "world" });
+            // 模型着色
+            viewer3D.overrideComponentsColorById(["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "14", "15", "16", "17", "18", "19", "20", "21", "22", "63", "64", "65", "66", "69", "70"], new Glodon.Web.Graphics.Color(255, 255, 255, 1.0));
+            //开启平行光投影
+            viewer3D.enableShadow(true);
+        });
+    }
+
+    // 加载失败回调函数
+    function failureCallback(error) {
+        console.log(error);
+    }
+
+    // 构造控高分析配置项
+    let heightLimitAnalysis;
+    function createHeightLimit() {
+        if (heightLimitAnalysis) {
+            return;
+        }
+        // 构造控高分析配置项
+        let heightLimitAnalysisConfig = new Glodon.Bimface.Analysis.HeightLimit.HeightLimitAnalysisConfig();
+        // 设置控高分析颜色、控制高度、控高分析模式、控高分析的平面区域、viewer对象等参数
+        heightLimitAnalysisConfig.color = new Glodon.Web.Graphics.Color(255, 0, 0, 1);
+        heightLimitAnalysisConfig.height = 80000;
+        heightLimitAnalysisConfig.mode = 'customized';
+        heightLimitAnalysisConfig.area = { 'type': 'circle', 'center': { x: 13742475, y: 26697538, z: 9512 }, 'radius': 1200000 };
+        heightLimitAnalysisConfig.viewer = viewer3D;
+        // 构造控高分析对象
+        heightLimitAnalysis = new Glodon.Bimface.Analysis.HeightLimit.HeightLimitAnalysis(heightLimitAnalysisConfig);
+        viewer3D.render();
+    }
+
+    // 切换控高分析模式
+    let globalMode = false
+    function update() {
+        if (globalMode) {
+            // 设置为局部区域控高分析
+            heightLimitAnalysis.setMode('customized');
+            setButtonText("btnChangeHeightLimitMode", "全局模式");
+        } else {
+            // 设置为全局控高分析
+            heightLimitAnalysis.setMode('global');
+            setButtonText("btnChangeHeightLimitMode", "自定义范围");
+        }
+        heightLimitAnalysis.update();
+        viewer3D.render();
+        globalMode = !globalMode;
+    }
+
+    // *********************** 按钮文字 ***********************
+    function setButtonText(btnId, text) {
+        let dom = document.getElementById(btnId);
+        if (dom != null && dom.nodeName == "BUTTON") {
+            dom.innerText = text;
+        }
+    }
+</script>
+</body>
+
+</html>

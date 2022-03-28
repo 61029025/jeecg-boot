@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>图纸对比</title>
+    <style>
+        html,
+        body,
+        .container {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        .main {
+            width: calc(100% - 160px);
+            height: 100%;
+            float: left;
+        }
+
+        .side-nav {
+            float: right;
+            width: 160px;
+            margin-left: -160px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .side-nav h3 {
+            margin: 0;
+            border-bottom: 1px solid #aaa;
+            padding-left: 10px;
+            line-height: 40px;
+            font-size: 14px;
+        }
+
+        .detail ul {
+            cursor: pointer;
+            padding-left: 3px;
+            margin-top: 5px;
+            margin-bottom: 0;
+            font-size: 12px;
+        }
+
+        .detail .bf-icon {
+            padding: 5px;
+        }
+
+        .detail li {
+            list-style-type: none;
+            padding-left: 27px;
+        }
+
+        .selected {
+            color: #4990e2;
+        }
+
+        .bf-collapse .items {
+            display: none;
+        }
+    </style>
+
+    <script src="https://static.bimface.com/api/BimfaceSDKLoader/BimfaceSDKLoader@latest-release.js"
+            charset="utf-8"></script>
+</head>
+
+<body>
+<div class="container">
+    <div class="main" id="viewer"></div>
+    <div class="side-nav">
+        <h3>差异列表(<span>0</span>)</h3>
+        <div class="detail">
+            <ul class="bf-collapse add">
+                <span class="bf-icon"></span>
+                <span>新增(<b>0</b>)</span>
+                <div class="items"></div>
+            </ul>
+            <ul class="bf-collapse deletes">
+                <span class="bf-icon"></span>
+                <span>删除(<b>0</b>)</span>
+                <div class="items"></div>
+            </ul>
+            <ul class="bf-collapse edit">
+                <span class="bf-icon"></span>
+                <span>修改(<b>0</b>)</span>
+                <div class="items"></div>
+            </ul>
+        </div>
+    </div>
+</div>
+    <script type="text/javascript">
+        // 指定对比的图纸和对比的结果
+        const compareToken = '26b0b3932ed740b6ae703a4d300e67c4', // compareToken: 前两张图纸对比结果
+            prevToken = 'bbba170e084d4cdf9aeb48b2983184bd',        // prevToken: 修改前图纸
+            latestToken = '66e314aa72784c2ca20c7d6e86906677';      // latestToken: 修改后图纸
+        let drawingSet = null;
+
+        BimfaceLoaderConfig = new BimfaceSDKLoaderConfig();
+        BimfaceLoaderConfig.viewToken = compareToken;
+        BimfaceSDKLoader.load(BimfaceLoaderConfig, onSDKLoadSucceeded, onSDKLoadFailed);
+
+        // JSSDK引擎加载成功回调
+        function onSDKLoadSucceeded(viewMetaData) {
+
+            // 加载叠图
+            const viewDom = document.getElementById('viewer'),
+                WebAppConfig = new Glodon.Bimface.Application.WebApplicationDrawingSetConfig();
+            WebAppConfig.Toolbars = ["MainToolbar"]
+            WebAppConfig.domElement = viewDom;
+
+            const WebApplicationDrawingSet = new Glodon.Bimface.Application.WebApplicationDrawingSet(WebAppConfig);
+            drawingSet = WebApplicationDrawingSet.getViewer();
+
+            const drawingTokens = [{ id: 1, viewToken: latestToken, }, { id: 2, viewToken: prevToken }];
+            WebApplicationDrawingSet.addDrawings(drawingTokens, function () {
+                if (drawingSet.sets[0].viewerDrawing.version == '2') {
+                    drawingSet.sets[0].viewerDrawing.setDisplayMode(3)
+                    drawingSet.sets[1].viewerDrawing.setDisplayMode(3)
+                } else {
+                    WebApplicationDrawingSet.getViewer().setDisplayMode(0)
+                }
+                sideNavInit(drawingSet, compareToken);
+            });
+        };
+
+        // JSSDK引擎加载失败回调
+        function onSDKLoadFailed(error) {
+            alert(JSON.stringify(error));
+        };
+
+        // 侧导航初始化
+        function sideNavInit(viewer, viewtoken) {
+            viewer.getViewMetaData(viewtoken, function (viewMetaData) {
+                const id = viewMetaData.databagId;
+                Glodon.Web.Lang.Utility.HttpRequest.ajax({
+                    url: `https://m.bimface.com/${id}/result.json`,
+                    success: function (res) {
+                        const data = JSON.parse(res);
+                        // 兼容两个不同版本的数据
+                        let { news, deletes, changes, additions, deletions, modifications } = data;
+                        additions = additions || news;
+                        deletions = deletions || deletes;
+                        modifications = changes || modifications;
+
+                        let addHtml = '', modifyHtml = '', deleteHtml = '';
+                        // 加载新增列表
+                        if (additions) {
+                            data.additions.map((item, i) => {
+                                addHtml += `<li class='add-item'>${item.id}</li>`
+                            });
+                            document.querySelector('.add .items').innerHTML = addHtml;
+                            document.querySelector('.add b').innerHTML = data.additions.length;
+                        }
+                        // 加载修改列表
+                        if (modifications) {
+                            data.modifications.map((item, i) => {
+                                modifyHtml += `<li class='modify-item'>${item.id}</li>`
+                            });
+                            document.querySelector('.edit .items').innerHTML = modifyHtml;
+                            document.querySelector('.edit b').innerHTML = data.modifications.length;
+                        }
+                        // 加载删除列表
+                        if (deletions) {
+                            data.deletions.map((item, i) => {
+                                deleteHtml += `<li class='delete-item'>${item.id}</li>`
+                            });
+                            document.querySelector('.deletes .items').innerHTML = deleteHtml;
+                            document.querySelector('.deletes b').innerHTML = data.deletions.length;
+                        }
+                        document.querySelector('.side-nav h3 span').innerHTML = additions.length + modifications.length + deletions.length;
+                        loadCloudRect(modifications, deletions, additions);
+                        sideNavEvents();
+                    }
+                });
+            });
+        };
+
+        // 侧导航事件绑定
+        function sideNavEvents() {
+            let dom = document.querySelector('.detail');
+            dom.addEventListener('click', function (e) {
+                let target = e.target;
+                tagName = target.tagName;
+                if (tagName == 'SPAN') {
+                    target.parentElement.toggleClass('bf-collapse');
+                } else if (tagName == 'LI') {
+                    let selectedElement = document.querySelector(".selected");
+                    selectedElement && selectedElement.removeClass('selected')
+                    let id = target.innerText;
+                    switch (target.className) {
+                        case "add-item":
+                            zoomToActiveRectById('add', id);
+                            break;
+                        case "modify-item":
+                            zoomToActiveRectById('modify', id);
+                            break;
+                        case "delete-item":
+                            zoomToActiveRectById('delete', id);
+                            break;
+                    }
+                    target.addClass('selected');
+                }
+            })
+        };
+
+        // zoom到选中的图元
+        function zoomToActiveRectById(type, id) {
+            const active = drawingSet.sets[0].viewerDrawing;   // 修改后图纸
+            const inActive = drawingSet.sets[1].viewerDrawing; // 修改前图纸
+            const ratio = 0.2;
+            // 选中效果切换
+            if (type && type !== 'delete') {
+                active.zoomToObject(id, ratio)
+                let box = active.getObjectBoundingBox(id)
+                inActive.getViewer().zoomToWorldBox(box[0], box[1], ratio)
+            }
+            else {
+                inActive.zoomToObject(id, ratio)
+                let box = inActive.getObjectBoundingBox(id)
+                active.getViewer().zoomToWorldBox(box[0], box[1], ratio)
+                // 针对旧版图纸数据强制更新
+                if (active.version === '1') {
+                    active.update(true)
+                    inActive.update(true)
+                }
+            }
+        }
+
+        // 加载云线
+        function loadCloudRect(changes, deletes, news) {
+            // active为修改后图纸, inActive为修改前图纸
+            const active = drawingSet.sets[0].viewerDrawing
+            const inActive = drawingSet.sets[1].viewerDrawing
+            active.getViewer().getCustomManager() && active.getViewer().getCustomManager().setLineWidth(2)
+            inActive.getViewer().getCustomManager() && inActive.getViewer().getCustomManager().setLineWidth(2)
+            // 分别设置新增、修改、删除图元及云线框颜色
+            const colorChange = new Glodon.Web.Graphics.Color(255, 255, 0, 0.5);
+            const colorDeletes = new Glodon.Web.Graphics.Color(192, 0, 0, 0.5);
+            const colorNews = new Glodon.Web.Graphics.Color(0, 255, 0, 0.5);
+            const colorCloud = new Glodon.Web.Graphics.Color(255, 157, 11, 0.5);
+            const _changes = _filterIds(changes);
+            const _deletes = _filterIds(deletes);
+            const _news = _filterIds(news);
+            if (active.version === '2') {
+                active.overrideElementsColorById(_changes, colorChange);
+                inActive.overrideElementsColorById(_deletes, colorDeletes);
+                active.overrideElementsColorById(_news, colorNews);
+                // 画聚合外边框
+                const scale = 25;
+                active.setElementBoxStyle("CloudRect");
+                inActive.setElementBoxStyle("CloudRect");
+                active.setElementBoxColor(colorCloud);
+                inActive.setElementBoxColor(colorCloud);
+                let idsActive = _changes.concat(_news);
+                let idsInActive = _deletes;
+                let bboxActives = _bBoxArray(active, idsActive);
+                let bboxInActives = _bBoxArray(inActive, idsInActive);
+                let bboxArray = bboxActives.concat(bboxInActives);
+                _showMergedBoundingBoxById(active, bboxArray, scale);
+            }
+        }
+
+        function _filterIds(list) {
+            return list.map((d, index) => {
+                if (d instanceof Object) {
+                    return d.id
+                } else if (typeof d == 'string') {
+                    return d
+                }
+            })
+        }
+
+        function _bBoxArray(viewerDrawing, ids) {
+            return ids.map(id => viewerDrawing.getObjectBoundingBox(id))
+        }
+
+        // 绘制聚合云线框
+        function _showMergedBoundingBoxById(viewerDrawing, _bboxArray, scale) {
+            let BoundingBoxUtil = Glodon.Web.Algorithm.BoundingBoxUtil;
+            let bboxArray = BoundingBoxUtil.toThreeJsBox2(_bboxArray, scale);
+            let bboxClusters = BoundingBoxUtil.mergeBoundingBox(bboxArray);
+
+            let drawingBboxArray = BoundingBoxUtil.toDrawingBox2(bboxClusters);
+            let _iteratorNormalCompletion22 = true;
+            let _didIteratorError22 = false;
+            let _iteratorError22 = undefined;
+
+            try {
+                for (let _iterator22 = drawingBboxArray[Symbol.iterator](), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
+                    let bbox = _step22.value;
+
+                    viewerDrawing._drawingViewer.showElementBoxByBBox(bbox, 0);
+                }
+            } catch (err) {
+                _didIteratorError22 = true;
+                _iteratorError22 = err;
+            } finally {
+                try {
+                    if (!_iteratorNormalCompletion22 && _iterator22.return) {
+                        _iterator22.return();
+                    }
+                } finally {
+                    if (_didIteratorError22) {
+                        throw _iteratorError22;
+                    }
+                }
+            }
+            viewerDrawing._drawingViewer.update();
+        }
+
+
+    </script>
+
+</body>
+
+</html>
